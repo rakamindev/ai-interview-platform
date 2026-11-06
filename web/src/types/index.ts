@@ -31,6 +31,8 @@ export interface AssessmentSkill {
   _destroy?: boolean;
 }
 
+export type InviteStatus = "pending" | "active" | "completed" | "expired" | "revoked";
+
 export interface Session {
   id: number;
   assessment_id: number;
@@ -39,7 +41,12 @@ export interface Session {
   candidate_name?: string;
   invite_token: string;
   invite_url: string;
-  status: "pending" | "active" | "ended";
+  invite_status?: InviteStatus;
+  invite_expires_at?: string;
+  invite_revoked_at?: string | null;
+  invite_reissued_count?: number;
+  consent_given_at?: string | null;
+  status: "pending" | "active" | "ended" | "failed";
   end_reason?: string;
   started_at?: string;
   ended_at?: string;
@@ -164,6 +171,11 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  language?: "en" | "id";
+  invite_status?: InviteStatus;
+  expires_at?: string;
+  consent_required?: boolean;
+  consent_given_at?: string | null;
 }
 
 export interface PaginationMeta {

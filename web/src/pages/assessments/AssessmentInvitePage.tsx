@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -14,72 +15,153 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { sessionsApi } from "@/services/sessions";
 import { LEVEL_LABELS } from "@/utils/constants";
-import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Clock,
+  Plus,
+  UserRound,
+  RotateCcw,
+  Ban,
+  AlertCircle,
+} from "lucide-react";
 import type { Assessment, Session } from "@/types";
+
+type SessionAction = "revoke" | "reissue";
+
+function errorMessage(error: unknown): string {
+  const errors = (
+    error as { response?: { data?: { errors?: Array<{ message?: string }> } } }
+  )?.response?.data?.errors;
+  return errors?.[0]?.message ?? "Something went wrong. Please try again.";
+}
+
+function formatDateTime(value?: string | null): string | null {
+  if (!value) return null;
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function inviteStatusOf(session: Session): string {
+  if (session.invite_status) return session.invite_status;
+  if (session.status === "ended" || session.status === "failed") return "completed";
+  return session.status;
+}
+
+function StatusChip({ session }: { session: Session }) {
+  const status = inviteStatusOf(session);
+
+  if (session.status === "failed") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+        Failed
+      </span>
+    );
+  }
+
+  switch (status) {
+    case "revoked":
+      return (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
+          Invite revoked
+        </span>
+      );
+    case "expired":
+      return (
+        <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          Invite expired
+        </span>
+      );
+    case "active":
+      return (
+        <span className="flex items-center gap-1 text-xs text-primary">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          Live
+        </span>
+      );
+    case "completed":
+      return (
+        <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          Completed
+        </span>
+      );
+    default:
+      return (
+        <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          Awaiting candidate
+        </span>
+      );
+  }
+}
 
 function SessionRow({
   session,
   index,
   assessmentId,
   onCopy,
+  onRevoke,
+  onReissue,
   copiedId,
+  busyAction,
 }: {
   session: Session;
   index: number;
   assessmentId: string;
   onCopy: (id: number) => void;
+  onRevoke: (session: Session) => void;
+  onReissue: (session: Session) => void;
   copiedId: number | null;
+  busyAction: { id: number; action: SessionAction } | null;
 }) {
   const navigate = useNavigate();
-  const isLive = session.status === "active";
-  const isEnded = session.status === "ended";
-  const isPending = session.status === "pending";
+  const status = inviteStatusOf(session);
+  const isLive = status === "active";
+  const isPending = status === "pending";
+  const isEnded = session.status === "ended" && session.end_reason !== "error";
+  const isRevocable = isPending;
+  const isReissuable = status === "expired" || status === "revoked";
   const displayName = session.candidate_name || `Candidate ${index}`;
+  const expiry = formatDateTime(session.invite_expires_at);
+  const isBusy = busyAction?.id === session.id;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+    <div className="flex flex-col gap-2 py-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-muted text-xs font-medium text-muted-foreground">
           {index}
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
-          {session.started_at && (
+        <div className="space-y-0.5 min-w-0">
+          <div className="text-sm font-medium truncate">{displayName}</div>
+          {isPending && expiry && (
+            <div className="text-xs text-muted-foreground">Expires {expiry}</div>
+          )}
+          {!isPending && session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
             </div>
           )}
+          {isReissuable && expiry && (
+            <div className="text-xs text-muted-foreground">Last expiry {expiry}</div>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            Awaiting candidate
-          </span>
-        )}
-        {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Live
-          </span>
-        )}
-        {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-            Failed
-          </span>
-        )}
-        {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Completed
-          </span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:shrink-0 sm:justify-end">
+        <StatusChip session={session} />
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {isPending && (
             <Button
               variant="ghost"
@@ -94,6 +176,20 @@ function SessionRow({
               )}
             </Button>
           )}
+
+          {isReissuable && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={isBusy}
+              onClick={() => onReissue(session)}
+            >
+              <RotateCcw className={`h-3 w-3 mr-1 ${isBusy && busyAction?.action === "reissue" ? "animate-spin" : ""}`} />
+              {isBusy && busyAction?.action === "reissue" ? "Reissuing..." : "Reissue link"}
+            </Button>
+          )}
+
           {isLive && (
             <Button
               variant="outline"
@@ -104,14 +200,37 @@ function SessionRow({
               <Eye className="h-3 w-3 mr-1" /> Monitor
             </Button>
           )}
-          {isEnded && session.end_reason !== "error" && (
+
+          {isEnded && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              >
+                Results
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/transcript`)}
+              >
+                Transcript
+              </Button>
+            </>
+          )}
+
+          {isRevocable && (
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => navigate(`/assessments/${assessmentId}/sessions/${session.id}/portfolio`)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+              disabled={isBusy}
+              onClick={() => onRevoke(session)}
             >
-              Results
+              <Ban className="h-3 w-3 mr-1" /> Revoke
             </Button>
           )}
         </div>
@@ -132,6 +251,9 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<{ id: number; action: SessionAction } | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<Session | null>(null);
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -148,10 +270,12 @@ export default function AssessmentInvitePage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
-  // Poll while any session is live or pending
+  // Poll only while an interview is actually live. Pending invites now change
+  // state server-side (expiry/revocation) when the assessor acts, so polling
+  // every pending invite forever was wasted traffic.
   useEffect(() => {
-    const hasActive = sessions.some((s) => s.status !== "ended");
-    if (!hasActive) return;
+    const hasLive = sessions.some((s) => s.status === "active");
+    if (!hasLive) return;
     const interval = setInterval(loadSessions, 5000);
     return () => clearInterval(interval);
   }, [sessions, loadSessions]);
@@ -165,19 +289,22 @@ export default function AssessmentInvitePage() {
     setCreatingSession(true);
     setShowInviteDialog(false);
     setNewSession(null);
+    setActionError(null);
     try {
       const res = await assessmentsApi.createSession(Number(id), candidateNameInput.trim() || undefined);
       const created = res.data.session;
       setNewSession(created);
       setSessions((prev) => [created, ...prev]);
+    } catch (error) {
+      setActionError(errorMessage(error));
     } finally {
       setCreatingSession(false);
     }
   };
 
-  const copyLink = (session: Session, id: number) => {
+  const copyLink = (session: Session, sessionId: number) => {
     navigator.clipboard.writeText(session.invite_url);
-    setCopiedId(id);
+    setCopiedId(sessionId);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -186,6 +313,37 @@ export default function AssessmentInvitePage() {
     navigator.clipboard.writeText(newSession.invite_url);
     setNewSessionCopied(true);
     setTimeout(() => setNewSessionCopied(false), 2000);
+  };
+
+  const handleRevoke = async (session: Session) => {
+    setBusyAction({ id: session.id, action: "revoke" });
+    setActionError(null);
+    try {
+      const res = await sessionsApi.revokeInvite(session.id);
+      setSessions((prev) => prev.map((s) => (s.id === session.id ? res.data.session : s)));
+      if (newSession?.id === session.id) setNewSession(null);
+      setRevokeTarget(null);
+    } catch (error) {
+      setActionError(errorMessage(error));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleReissue = async (session: Session) => {
+    setBusyAction({ id: session.id, action: "reissue" });
+    setActionError(null);
+    try {
+      const res = await sessionsApi.reissueInvite(session.id);
+      const updated = { ...res.data.session, invite_url: res.data.invite_url };
+      setSessions((prev) => prev.map((s) => (s.id === session.id ? updated : s)));
+      setNewSession(updated);
+      setNewSessionCopied(false);
+    } catch (error) {
+      setActionError(errorMessage(error));
+    } finally {
+      setBusyAction(null);
+    }
   };
 
   if (loading) {
@@ -201,7 +359,7 @@ export default function AssessmentInvitePage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -225,6 +383,13 @@ export default function AssessmentInvitePage() {
           </Button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>{actionError}</span>
+        </div>
+      )}
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
@@ -251,7 +416,29 @@ export default function AssessmentInvitePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Newly created session invite link */}
+      {/* Revoke confirmation */}
+      <Dialog open={Boolean(revokeTarget)} onOpenChange={(open) => !open && setRevokeTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Revoke this interview link?</DialogTitle>
+            <DialogDescription>
+              The candidate will see a clear "link cancelled" message and cannot start the interview. You can reissue a new link afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeTarget(null)}>Keep link</Button>
+            <Button
+              variant="destructive"
+              onClick={() => revokeTarget && handleRevoke(revokeTarget)}
+              disabled={busyAction?.action === "revoke"}
+            >
+              {busyAction?.action === "revoke" ? "Revoking..." : "Revoke link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Newly created / reissued session invite link */}
       {newSession && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-4 space-y-2">
@@ -265,6 +452,9 @@ export default function AssessmentInvitePage() {
                 {newSession.invite_url}
               </span>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Expires {formatDateTime(newSession.invite_expires_at) ?? "in 72 hours"}. Previous links stay invalid.
+            </p>
             <Button variant="outline" size="sm" onClick={copyNewSessionLink} className="w-full">
               {newSessionCopied ? (
                 <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
@@ -312,7 +502,10 @@ export default function AssessmentInvitePage() {
                     const s = sessions.find((x) => x.id === sid);
                     if (s) copyLink(s, sid);
                   }}
+                  onRevoke={setRevokeTarget}
+                  onReissue={handleReissue}
                   copiedId={copiedId}
+                  busyAction={busyAction}
                 />
               ))}
             </CardContent>

@@ -12,6 +12,12 @@ export const sessionsApi = {
       session: { reason },
     }),
 
+  revokeInvite: (id: number) =>
+    api.post<{ session: Session }>(`/sessions/${id}/revoke_invite`),
+
+  reissueInvite: (id: number) =>
+    api.post<{ session: Session; invite_url: string }>(`/sessions/${id}/reissue_invite`),
+
   getCoverage: (id: number) =>
     api.get<CoverageMap>(`/sessions/${id}/coverage`),
 
@@ -28,6 +34,11 @@ export const sessionsApi = {
 
   getCandidateInfo: (token: string) =>
     api.get<CandidateInfo>(`/sessions/${token}/candidate`),
+
+  giveConsent: (token: string) =>
+    api.post<{ consent_given_at: string; consent_required: boolean }>(
+      `/sessions/${token}/consent`
+    ),
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),

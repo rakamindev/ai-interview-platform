@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Case Study — Candidate Trust at the Invite Boundary</title>
+<style>
+  @page { size: A4; margin: 17mm 15mm 18mm 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1a202c; line-height: 1.52; font-size: 10.6pt; margin: 0;
+  }
+  h1, h2, h3, h4 { color: #0f172a; line-height: 1.22; margin: 0 0 8px; }
+  h1 { font-size: 25pt; letter-spacing: -0.4px; }
+  h2 {
+    font-size: 15pt; margin-top: 26px; padding-bottom: 5px;
+    border-bottom: 2px solid #0f766e;
+  }
+  h3 { font-size: 11.6pt; margin-top: 16px; color: #0f766e; }
+  h4 { font-size: 10.6pt; margin-top: 12px; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 4px 0 10px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  code, .mono {
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 8.7pt; background: #f1f5f9; padding: 1px 4px;
+    border-radius: 3px; color: #0f172a;
+  }
+  pre {
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 8.4pt; background: #0b1220; color: #e2e8f0;
+    padding: 10px 12px; border-radius: 6px; overflow: hidden;
+    white-space: pre-wrap; line-height: 1.42; margin: 6px 0 12px;
+  }
+  pre .ok { color: #6ee7b7; }
+  pre .bad { color: #fca5a5; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 9.2pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 6px 7px; text-align: left; vertical-align: top; }
+  th { background: #f0fdfa; color: #115e59; font-weight: 600; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .cover {
+    border-top: 8px solid #0f766e; padding-top: 26px; margin-bottom: 22px;
+  }
+  .eyebrow { text-transform: uppercase; letter-spacing: 1.4px; font-size: 8.5pt; color: #0f766e; font-weight: 700; }
+  .subtitle { font-size: 13pt; color: #475569; margin: 8px 0 18px; }
+  .meta { font-size: 9.4pt; color: #475569; }
+  .meta strong { color: #1e293b; }
+  .callout {
+    border-left: 4px solid #0f766e; background: #f0fdfa;
+    padding: 10px 14px; margin: 12px 0; font-size: 10pt;
+  }
+  .warn { border-left-color: #b45309; background: #fffbeb; }
+  .danger { border-left-color: #b91c1c; background: #fef2f2; }
+  .pill {
+    display: inline-block; font-size: 7.8pt; font-weight: 700; letter-spacing: .4px;
+    padding: 2px 6px; border-radius: 999px; color: white; vertical-align: 1px;
+  }
+  .p0 { background: #b91c1c; } .p1 { background: #c2410c; }
+  .p2 { background: #a16207; } .p3 { background: #475569; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { border: 1px solid #cbd5e1; border-radius: 7px; padding: 10px 12px; background: #fff; }
+  figure { margin: 10px 0 16px; page-break-inside: avoid; }
+  figure img { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; }
+  figure.mobile { text-align: center; }
+  figure.mobile img { width: 300px; }
+  figcaption { font-size: 8.7pt; color: #475569; margin-top: 5px; }
+  .shot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .shot-grid figure { margin: 0 0 8px; }
+  .shot-grid figure img { width: 100%; }
+  .pagebreak { page-break-before: always; }
+  .toc { columns: 2; font-size: 9.6pt; }
+  .toc div { margin-bottom: 3px; }
+  .small { font-size: 8.8pt; color: #475569; }
+  .signature { margin-top: 22px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 9pt; color: #475569; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="eyebrow">Case Study · Fullstack Product Engineer · Batch 3 2026</div>
+  <h1>Candidate trust at the invite boundary</h1>
+  <div class="subtitle">Making interview invitations expire, revoke, reissue, and consent — without losing the candidate or leaking another tenant's data.</div>
+  <table style="width: 62%;">
+    <tr><th style="width: 32%;">Prepared by</th><td>Derio</td></tr>
+    <tr><th>Repository</th><td>rakamindev/ai-interview-platform</td></tr>
+    <tr><th>Branch</th><td><code>feat/candidate-invite-trust</code></td></tr>
+    <tr><th>Pull request</th><td><a href="https://github.com/rakamindev/ai-interview-platform/pull/240">#240</a></td></tr>
+    <tr><th>Chosen slice</th><td>Invite lifecycle + tenant security</td></tr>
+    <tr><th>Submission date</th><td>6 November 2026</td></tr>
+    <tr><th>Deliverables</th><td>This PDF, 13 screenshots, 3–5 min video, GitHub PR</td></tr>
+  </table>
+</section>
+
+<h2 style="margin-top:0;">Contents</h2>
+<div class="toc">
+  <div>1. Executive summary</div>
+  <div>2. Scope and product reasoning</div>
+  <div>3. Severity-ranked findings (P0–P3)</div>
+  <div>4. Missing spec vs defective implementation</div>
+  <div>5. Constraint signal</div>
+  <div>6. Option A / Option B trade-off matrix</div>
+  <div>7. Self-derived acceptance criteria</div>
+  <div>8. What shipped</div>
+  <div>9. Test coverage evidence</div>
+  <div>10. Seeded-fault proof</div>
+  <div>11. AI verification note</div>
+  <div>12. Claimed depth (balanced)</div>
+  <div>13. Limitations and next steps</div>
+  <div>14. Screenshots</div>
+  <div>15. How to run and review</div>
+</div>
+
+<h2>1. Executive summary</h2>
+<p>
+  The baseline could create an interview, but it could not be trusted at the boundary where a candidate
+  arrives. Invite links pointed at the API origin and returned 404. Links never expired and could not be
+  revoked. Any failed lookup — expired, revoked, already used — rendered <strong>“Interview Complete”</strong>,
+  telling a candidate who never interviewed that they were done. Nobody recorded consent before audio was
+  captured. Separately, an assessor could read or modify another tenant's portfolio by guessing a global id.
+</p>
+<p>
+  I shipped a narrow, end-to-end slice that fixes those failures: a server-enforced invite lifecycle
+  (expiry, revocation, rotation on reissue), precise candidate-facing states, explicit server-recorded
+  consent, an assessor invite-management screen, and tenant-scoped portfolio authorization. The slice is
+  demoable without a Gemini key and is verified by 43 RSpec examples, 24 frontend tests, a CI workflow,
+  and two deliberately reintroduced faults that the suite catches.
+</p>
+<div class="callout">
+  <strong>One-line thesis:</strong> the candidate link is a security boundary and a trust boundary at the
+  same time. Treating it as only a database lookup produces both data leaks and dishonest UX. I fixed both
+  sides together and made every state explicit, testable, and observable.
+</div>
+
+<h2>2. Scope and product reasoning</h2>
+<p>
+  The brief offers several slices. I chose <strong>invite lifecycle + tenant security</strong> because it is
+  the highest-leverage area that can be made production-credible in one day: it touches authorization,
+  privacy, candidate trust, and the assessor workflow, and it can be demonstrated deterministically without
+  a live AI provider.
+</p>
+<table>
+  <tr><th style="width: 26%;">Dimension</th><th>Decision</th></tr>
+  <tr><td>Primary user</td><td>Candidate arriving from an invitation, plus the assessor who manages invitations.</td></tr>
+  <tr><td>Core job</td><td>“Tell me honestly whether I can start, protect my data, and let the hiring team recover a link safely.”</td></tr>
+  <tr><td>In scope</td><td>Link construction, expiry, revocation, reissue/token rotation, candidate state machine, consent capture, assessor invite management, tenant scoping of portfolios and overrides, tests and CI.</td></tr>
+  <tr><td>Out of scope</td><td>Email delivery, a full invitation service, live audio/Gemini reliability, resume-an-interrupted-session, full i18n framework, admin user management.</td></tr>
+  <tr><td>Demo constraint</td><td>No Gemini key required. Seed data covers every invite state; the live interview path is observable but not re-recorded.</td></tr>
+</table>
+
+<h2>3. Severity-ranked findings (P0–P3)</h2>
+<p class="small">Severity is scoped to this slice and to “about to ship to a client”. P0 blocks release; P1 breaks a core promise; P2 degrades an important workflow; P3 is polish with real cost.</p>
+
+<h3><span class="pill p0">P0</span> &nbsp;Invite links were built for the API, not the web app</h3>
+<p><strong>Evidence.</strong> <code>Session#invite_url</code> used <code>APP_BASE_URL</code> (the API origin,
+e.g. <code>http://localhost:3001</code>) and appended <code>/interview/:token</code>. That route only exists in
+the React app on <code>:5173</code>; the API has no such route.</p>
+<p><strong>Repro.</strong> Create a session and open the returned <code>invite_url</code>. The candidate gets a
+404 before seeing any interview UI. The assessor's “Copy link” action therefore distributed a broken link.</p>
+<p><strong>Fix.</strong> Use <code>WEB_BASE_URL</code> (with <code>CANDIDATE_BASE_URL</code> as a compatibility
+alias and <code>http://localhost:5173</code> as a dev default). Documented in
+<code>application.yml.sample</code>. Covered by a model spec that asserts the URL contains <code>/interview/</code>
+and never <code>/api/v1</code>.</p>
+
+<h3><span class="pill p0">P0</span> &nbsp;Cross-tenant portfolio access (IDOR)</h3>
+<p><strong>Evidence.</strong> <code>PortfoliosController#set_portfolio</code> used a bare
+<code>Portfolio.find</code>, and <code>PortfolioSkillsController</code> used a bare
+<code>PortfolioSkill.find</code>. Authorization checked the role, not the tenant, so any authenticated assessor
+could read another tenant's candidate portfolio or write an override by changing a numeric id.</p>
+<p><strong>Repro.</strong> Log in as tenant <em>test-corp</em>, request
+<code>GET /api/v1/sessions/&lt;other-tenant-session-id&gt;/portfolio</code>, or POST an override to another
+tenant's <code>portfolio_skill_id</code>. Both returned data or wrote a row.</p>
+<p><strong>Fix.</strong> Lookups now join through <code>sessions</code> and filter on
+<code>sessions.tenant_id = current_tenant_id</code>. Cross-tenant requests return 404, not 403, so the API does
+not confirm that a foreign resource exists. Verified by request specs for both read and write paths.</p>
+
+<h3><span class="pill p1">P1</span> &nbsp;Invitations were permanent and irrevocable</h3>
+<p><strong>Evidence.</strong> <code>sessions</code> had no expiry or revocation fields. A leaked link remained
+valid forever, and the assessor had no way to withdraw an invitation sent to the wrong person or for a paused
+role.</p>
+<p><strong>Fix.</strong> Added <code>invite_expires_at</code> (default 72h, configurable via
+<code>INVITE_TTL_HOURS</code>), <code>invite_revoked_at</code>, <code>consent_given_at</code>, and
+<code>invite_reissued_count</code>. Reissue rotates the token instead of extending the old one, so a leaked link
+stays dead. Expiry is evaluated at read time, so no background job is required for correctness.</p>
+
+<h3><span class="pill p1">P1</span> &nbsp;A failed lookup was rendered as “Interview Complete”</h3>
+<p><strong>Evidence.</strong> The candidate page caught every error with
+<code>.catch(() =&gt; setInterviewState("complete"))</code>. The backend also collapsed all rejected invites into
+a generic 404. An expired or revoked candidate was told their interview was recorded and the hiring team would
+follow up — a false statement about a recording that never happened.</p>
+<p><strong>Fix.</strong> The API now returns stable codes — <code>invite_not_found</code> (404),
+<code>invite_expired</code>, <code>invite_revoked</code>, <code>invite_completed</code>,
+<code>invite_in_progress</code> (410) — and the SPA maps each to a specific, honest screen with a next action.
+The completion screen is only reachable from a real completion event. The frontend test asserts that an expired
+link does <em>not</em> render “Interview Complete”.</p>
+
+<h3><span class="pill p1">P1</span> &nbsp;No consent was captured before recording</h3>
+<p><strong>Evidence.</strong> The candidate flow went straight from lookup to hardware check to microphone
+capture. Nothing recorded that the candidate agreed to voice recording and transcript processing; there was not
+even a checkbox.</p>
+<p><strong>Fix.</strong> A consent gate appears before the device check. The checkbox is affirmative and blocks
+“Continue” until ticked. Consent is persisted server-side as <code>consent_given_at</code> through
+<code>POST /sessions/:token/consent</code>, which is idempotent and refused on dead links. Consent copy is
+available in English and Indonesian. The audit trail does not depend on client memory.</p>
+
+<h3><span class="pill p2">P2</span> &nbsp;Assessors could not sign in with the assessor role</h3>
+<p><strong>Evidence.</strong> <code>User::ASSESSOR_ROLES</code> was only <code>%w[admin]</code>, and
+<code>ROLES</code> did not include <code>assessor</code>, so an assessor account could neither be created
+validly nor log in. <code>AuthorizeApiRequest</code> already intended to accept both roles.</p>
+<p><strong>Fix.</strong> <code>ASSESSOR_ROLES = %w[admin assessor]</code>; <code>ROLES</code> includes
+<code>assessor</code>; login accepts either. Covered by a request spec that rejects a plain <code>user</code>
+token with 403.</p>
+
+<h3><span class="pill p2">P2</span> &nbsp;The assessor had no invite state, recovery, or confidence</h3>
+<p><strong>Evidence.</strong> The candidates list rendered every non-ended session as “Awaiting candidate” or
+“Live”. Expired and revoked links were invisible; “Copy link” was offered for dead links; there was no expiry
+date, no reissue, and no revoke. Pending sessions were polled every five seconds forever.</p>
+<p><strong>Fix.</strong> Each row now shows a precise status chip, expiry time, and only the actions valid for
+that state: copy/revoke for pending, reissue for expired or revoked, monitor for live, results/transcript for
+completed. Revoke is confirmation-gated. Actions surface API errors inline instead of failing silently. Polling
+runs only while an interview is live.</p>
+
+<h3><span class="pill p2">P2</span> &nbsp;Revoking a live interview could hide it from the assessor</h3>
+<p><strong>Evidence.</strong> The first version allowed revoking an active session. Because revocation outranks
+status in the status chip, the row would show “Invite revoked” and lose the “Monitor” action while the
+interview was still running.</p>
+<p><strong>Fix.</strong> Revocation is limited to pending invitations (422 while live). A live interview is
+ended explicitly, not revoked. This keeps “Live” and “Monitor” unambiguous. Covered by a request spec.</p>
+
+<h3><span class="pill p3">P3</span> &nbsp;Candidate copy was English-only and device-unfriendly</h3>
+<p><strong>Evidence.</strong> The product targets the Indonesian market, but every candidate string was English.
+The assessor row also compressed candidate names to zero width on a 390px viewport once actions were added.</p>
+<p><strong>Fix.</strong> Candidate copy has English and Indonesian variants with a persisted language toggle,
+defaulting to <code>id</code> when the browser locale is Indonesian. The assessor header and candidate row stack
+cleanly on mobile; verified at 390×844 with no horizontal overflow.</p>
+
+<h2>4. Missing spec vs defective implementation</h2>
+<p>
+  A release review has to separate “the code is wrong” from “the product never decided”. Conflating them leads
+  either to excusing bugs or to inventing policy in code. My classification:
+</p>
+<table>
+  <tr><th style="width: 22%;">Area</th><th style="width: 20%;">Classification</th><th>Why / what I did</th></tr>
+  <tr>
+    <td>Invite URL origin</td><td><strong>Defect</strong></td>
+    <td>The frontend route already existed; the backend used the wrong base URL. No product decision needed.</td>
+  </tr>
+  <tr>
+    <td>Portfolio tenant scoping</td><td><strong>Defect</strong></td>
+    <td>Every other model is tenant-scoped; these two lookups bypassed the pattern. Security bug, not a spec gap.</td>
+  </tr>
+  <tr>
+    <td>Role constants</td><td><strong>Defect</strong></td>
+    <td>Two files disagreed about whether “assessor” exists. Fixed to the already-documented intent.</td>
+  </tr>
+  <tr>
+    <td>Silent failure → “Complete”</td><td><strong>Defect</strong></td>
+    <td>The UI asserted a recording that did not happen. Honesty is not optional; it is a correctness bug.</td>
+  </tr>
+  <tr>
+    <td>Invite TTL</td><td><strong>Missing spec</strong></td>
+    <td>No duration was defined. I chose 72h as a defensible default, made it configurable, and flagged it for product/legal sign-off.</td>
+  </tr>
+  <tr>
+    <td>Reissue policy</td><td><strong>Missing spec</strong></td>
+    <td>Should reissue extend the old token or rotate? I chose rotation because a leaked link must stay dead. Documented as a decision, not a hidden assumption.</td>
+  </tr>
+  <tr>
+    <td>Consent wording and legal basis</td><td><strong>Missing spec</strong></td>
+    <td>I implemented the mechanism and plain-language copy for EN/ID, but the final wording needs legal review under UU PDP. The system records <em>when</em> consent was given; it does not claim to be legal advice.</td>
+  </tr>
+  <tr>
+    <td>Resume an interrupted interview</td><td><strong>Missing spec</strong></td>
+    <td>There is no resume flow. Rather than fake one, an in-progress link shows an honest “already in progress — contact the hiring team” state. This is a known limitation.</td>
+  </tr>
+  <tr>
+    <td>Localization scope</td><td><strong>Missing spec</strong></td>
+    <td>The brief does not require i18n. I localized only candidate-critical copy to address the Indonesia-market gap without inventing a full translation programme.</td>
+  </tr>
+</table>
+<div class="callout warn">
+  <strong>Review stance.</strong> I did not “fix” missing-spec areas by silently picking behaviour and presenting
+  it as a bug fix. Each default is named in this report, configurable where practical, and listed for sign-off.
+</div>
+
+<h2>5. Constraint signal</h2>
+<p>
+  I optimized for a <strong>credible vertical slice</strong> under a one-day deadline, not for maximum surface
+  area. The submission is intentionally narrow and deep:
+</p>
+<div class="grid">
+  <div class="card">
+    <h4>Constraints I worked within</h4>
+    <ul>
+      <li>Roughly one day from clone to submission.</li>
+      <li>No Gemini key and no reliable live audio demo.</li>
+      <li>No test runner or CI in the baseline.</li>
+      <li>Shared PostgreSQL database and public <code>organizations</code> table.</li>
+      <li>Two services must still run together locally.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>What that bought</h4>
+    <ul>
+      <li>13 deterministic UI states, no external provider required.</li>
+      <li>67 automated examples (43 API + 24 web).</li>
+      <li>Seeded fault proof for the two highest-risk behaviours.</li>
+      <li>CI on every push/PR.</li>
+      <li>A demo that resets with one command.</li>
+    </ul>
+  </div>
+</div>
+<p>
+  <strong>Explicitly not built:</strong> email delivery, a background expiry sweeper, an audit-event table,
+  multi-invite-per-candidate, full i18n, and resume tokens. Each is a real next step, not a claim of completeness.
+  The trade-off is deliberate: a smaller surface that can be defended line by line beats a broad surface that
+  cannot be explained in an interview.
+</p>
+
+<h2>6. Option A / Option B trade-off matrix</h2>
+<p>
+  The central design choice was how to model invitation lifecycle. I considered adding fields to the existing
+  <code>sessions</code> record (Option A) versus introducing a first-class invitations aggregate with events
+  (Option B).
+</p>
+<table>
+  <tr>
+    <th style="width: 24%;">Criterion</th>
+    <th style="width: 38%;">Option A — lifecycle columns on <code>sessions</code> (chosen)</th>
+    <th>Option B — separate <code>invitations</code> + events</th>
+  </tr>
+  <tr><td>Time to a safe release</td><td>High: one reversible migration, no backfill service.</td><td>Low: new aggregate, backfill, dual-read/dual-write or cutover.</td></tr>
+  <tr><td>Backward compatibility</td><td>High: existing session payloads keep working; new fields are additive.</td><td>Medium: every reader must switch to the new relation.</td></tr>
+  <tr><td>Token rotation</td><td>Simple: rotate <code>invite_token</code>, keep a reissue counter.</td><td>Cleaner: each invitation row is immutable; full history by design.</td></tr>
+  <tr><td>Audit / compliance</td><td>Adequate for now: timestamps for consent, revocation, reissue count.</td><td>Strong: who revoked/reissued, when, and why, as append-only events.</td></tr>
+  <tr><td>Multiple invites per candidate</td><td>Weak: one invite per session.</td><td>Strong: modelled directly.</td></tr>
+  <tr><td>Migration risk</td><td>Low: additive columns with a 72h backfill for existing rows.</td><td>Higher: data move plus compatibility window.</td></tr>
+  <tr><td>Test surface</td><td>Small and focused; easy to reason about state precedence.</td><td>Larger: aggregate invariants and event projections.</td></tr>
+  <tr><td>Verdict</td><td><strong>Ship now.</strong> It closes the security and trust holes without a risky migration.</td><td><strong>Adopt when</strong> multiple invites, compliance-grade audit, or invite analytics become requirements.</td></tr>
+</table>
+<p>
+  I also rejected a third “Option B” for the UX: keeping the single “something went wrong” screen and improving
+  the wording. It is cheaper, but it preserves the core dishonesty — a candidate still cannot tell whether they
+  are late, cancelled, done, or disconnected. Precise server codes plus distinct states are the whole point of
+  the slice.
+</p>
+
+<h2>7. Self-derived acceptance criteria</h2>
+<p>I wrote these before implementation and used them as the review checklist. Each maps to automated or visual evidence.</p>
+<table>
+  <tr><th style="width: 5%;">#</th><th style="width: 55%;">Criterion</th><th>Evidence</th></tr>
+  <tr><td>AC1</td><td>A fresh invite opens the consent screen; no audio is requested before consent is recorded.</td><td>Consent gate component tests + candidate flow test.</td></tr>
+  <tr><td>AC2</td><td>An expired link returns 410 with <code>invite_expired</code> and never shows “Interview Complete”.</td><td>Candidate request spec; <code>InterviewPage</code> test; screenshot 05.</td></tr>
+  <tr><td>AC3</td><td>A revoked link returns 410 with <code>invite_revoked</code> and a “cancelled” explanation.</td><td>Request spec; screenshot 06.</td></tr>
+  <tr><td>AC4</td><td>Completed, in-progress, and unknown tokens have distinct states and codes.</td><td>Request specs; screenshots 07–09.</td></tr>
+  <tr><td>AC5</td><td>Reissuing rotates the token, resets revocation, starts a new expiry window, and increments the counter; the old URL is dead.</td><td>Model + request specs; screenshot 11.</td></tr>
+  <tr><td>AC6</td><td>Revoking a pending link is confirmed, immediate, and reversible only through reissue. Live interviews cannot be revoked.</td><td>Request specs; screenshot 02.</td></tr>
+  <tr><td>AC7</td><td>The assessor sees the true invite status, expiry, and only valid actions; errors are visible.</td><td>Component logic + screenshots 01/11/13.</td></tr>
+  <tr><td>AC8</td><td>Candidate-critical copy works in English and Indonesian; mobile layouts do not overflow at 390px.</td><td>Screenshots 04/12/13; overflow assertion in capture run.</td></tr>
+  <tr><td>AC9</td><td>No assessor can read or write another tenant's portfolio or skill override.</td><td>Cross-tenant request specs; curl evidence.</td></tr>
+  <tr><td>AC10</td><td>API and web tests run in CI on push and PR; the build type-checks.</td><td><code>.github/workflows/ci.yml</code>; local passing logs.</td></tr>
+</table>
+
+<h2>8. What shipped</h2>
+<h3>Backend</h3>
+<ul>
+  <li><strong>Migration</strong> <code>20261106000000_add_invite_lifecycle_to_sessions.rb</code>: additive, reversible, backfills 72h expiry for existing sessions.</li>
+  <li><strong>Session model</strong>: <code>invite_usable?</code>, <code>invite_status</code>, <code>revoke_invite!</code>, <code>reissue_invite!</code>, <code>record_consent!</code>, corrected <code>invite_url</code>, configurable TTL.</li>
+  <li><strong>SessionsController</strong>: precise candidate error codes, server-recorded consent, assessor revoke/reissue, richer session JSON. Revoke refuses live and completed sessions; reissue refuses live and completed sessions.</li>
+  <li><strong>Tenant isolation</strong>: portfolio and portfolio-skill lookups join through sessions and filter by <code>current_tenant_id</code>.</li>
+  <li><strong>Auth</strong>: assessor role accepted consistently by model validations and login.</li>
+  <li><strong>Error envelope</strong>: optional stable <code>code</code> on JSON errors.</li>
+  <li><strong>Rate limiting</strong>: consent endpoint included in the candidate throttle; tests use an in-memory store so Redis is not required in CI.</li>
+</ul>
+<h3>Frontend</h3>
+<ul>
+  <li><strong><code>candidateAccess.ts</code></strong>: pure error mapping, EN/ID copy, consent copy — unit-testable without React.</li>
+  <li><strong><code>CandidateAccessState</code></strong>: honest, state-specific screen with retry only for connectivity failures.</li>
+  <li><strong><code>ConsentGate</code></strong>: affirmative checkbox, disabled continue, server error handling, language toggle.</li>
+  <li><strong><code>InterviewPage</code></strong>: explicit loading → rejected → consent → device check → interview states; no fake completion.</li>
+  <li><strong>Assessor invite page</strong>: status chips, expiry, revoke confirmation, reissue card, inline errors, results/transcript links, live-only polling, responsive rows.</li>
+  <li><strong>Shell</strong>: responsive assessor header at mobile widths.</li>
+</ul>
+
+<h2>9. Test coverage evidence</h2>
+<p>
+  The baseline had no test runner and no CI. I added both, and kept the tests focused on behaviour rather than
+  implementation detail. The API suite runs against PostgreSQL with transactional fixtures and real request
+  middleware, including tenant resolution from the JWT <code>scheme</code> claim.
+</p>
+<table>
+  <tr><th style="width: 32%;">Suite</th><th style="width: 12%;">Examples</th><th>What it proves</th></tr>
+  <tr><td><code>spec/models/session_spec.rb</code></td><td>18</td><td>Defaults, URL origin, expiry/revocation/consumption, status precedence, rotation, consent idempotency.</td></tr>
+  <tr><td><code>spec/requests/candidate_invites_spec.rb</code></td><td>12</td><td>Every candidate code path, consent, idempotency, audio-complete behaviour.</td></tr>
+  <tr><td><code>spec/requests/invite_management_spec.rb</code></td><td>10</td><td>Assessor revoke/reissue rules, auth, role rejection, cross-tenant 404.</td></tr>
+  <tr><td><code>spec/requests/portfolio_tenant_isolation_spec.rb</code></td><td>4</td><td>Read and write isolation for portfolios and overrides.</td></tr>
+  <tr><td><strong>Total API</strong></td><td><strong>43</strong></td><td><strong>0 failures</strong></td></tr>
+  <tr><td><code>candidateAccess.test.ts</code></td><td>10</td><td>Code→state mapping, status fallback, network classification, EN/ID copy.</td></tr>
+  <tr><td><code>CandidateAccessState.test.tsx</code></td><td>4</td><td>Expired vs retryable rendering, Indonesian copy, no false completion.</td></tr>
+  <tr><td><code>ConsentGate.test.tsx</code></td><td>3</td><td>Affirmative opt-in, language switch, error handling.</td></tr>
+  <tr><td><code>InterviewPage.test.tsx</code></td><td>7</td><td>End-to-end state selection with mocked API and device check.</td></tr>
+  <tr><td><strong>Total web</strong></td><td><strong>24</strong></td><td><strong>0 failures</strong>, TypeScript clean</td></tr>
+</table>
+<pre><span class="ok">$ bundle exec rspec</span>
+43 examples, 0 failures
+
+<span class="ok">$ npm test</span>
+Test Files  4 passed (4)
+     Tests  24 passed (24)
+
+<span class="ok">$ npx tsc --noEmit</span>
+(no output — type-check clean)</pre>
+<p class="small">
+  Raw logs: <code>assessment/evidence/rspec-passing.txt</code>,
+  <code>assessment/evidence/vitest-passing.txt</code>, and
+  <code>assessment/evidence/api-verification.txt</code> (live curl transcript covering all five invite states,
+  consent idempotency, revoke, reissue, and cross-tenant 404s).
+</p>
+
+<h3>CI</h3>
+<p>
+  <code>.github/workflows/ci.yml</code> runs two jobs on every push and pull request. The API job uses
+  PostgreSQL 16, prepares the schema, and runs RSpec. The web job uses Node 22, runs <code>npm ci</code>,
+  Vitest, and the production build (which includes <code>tsc</code>). The workflow pins Ruby 3.3.2 to match the
+  repository's <code>.ruby-version</code>/Gemfile rather than relying on a moving minor.
+</p>
+
+<h2>10. Seeded-fault proof</h2>
+<p>
+  Green tests prove little if they cannot fail. I reintroduced the two most important regressions, ran the
+  suites, and captured the failures, then restored the fixes.
+</p>
+<h3>Fault 1 — expiry ignored in <code>Session#invite_usable?</code></h3>
+<pre><span class="bad">def invite_usable?
+  pending? &amp;&amp; !invite_revoked?   # expiry check removed
+end</span>
+
+<span class="bad">42 examples, 3 failures</span>
+- Session#invite_usable? is false once the link expired
+- GET candidate rejects an expired link with a precise code (got 200, expected 410)
+- POST consent refuses consent on an expired link (got 200, expected 410)</pre>
+<p class="small">Full log: <code>assessment/evidence/seeded-fault-backend.txt</code>.</p>
+
+<h3>Fault 2 — expired code mapped to the old “completed” state</h3>
+<pre><span class="bad">case "invite_expired":
+  return "completed";   // restores the original misleading UX</span>
+
+<span class="bad">Test Files  2 failed | 2 passed
+     Tests  2 failed | 22 passed</span>
+- maps invite_expired to expired (received "completed")
+- shows an expired state instead of a fake completion screen
+  (received "You have already completed this interview")</pre>
+<p class="small">Full log: <code>assessment/evidence/seeded-fault-frontend.txt</code>.</p>
+<div class="callout">
+  <strong>Why this matters.</strong> The tests assert the product promise, not just the implementation.
+  Fault 1 protects the server boundary; Fault 2 protects the candidate's understanding of it. Both are the
+  failure modes this slice exists to prevent.
+</div>
+
+<h2>11. AI verification note</h2>
+<p>
+  AI assistance was used, and I am accountable for every committed line. My working rule was: <em>generate
+  candidates, verify behaviour</em>. Concretely:
+</p>
+<table>
+  <tr><th style="width: 30%;">AI-assisted</th><th>How I verified it</th></tr>
+  <tr>
+    <td>First drafts of the migration, model methods, controller branches, React components, tests, and report structure.</td>
+    <td>Read the diff end to end; ran the app; exercised every endpoint with curl; ran both suites; used seeded faults to prove the tests fail when the fix is removed.</td>
+  </tr>
+  <tr>
+    <td>Naming and copy variants (EN/ID).</td>
+    <td>Checked that every state has distinct copy, that no copy claims a completed recording for a rejected link, and that the Indonesian strings render in the UI.</td>
+  </tr>
+  <tr>
+    <td>Spec scaffolding and factories.</td>
+    <td>Confirmed the request specs go through real middleware and tenant resolution, not mocked authorization. Confirmed the cross-tenant specs fail if the tenant filter is removed.</td>
+  </tr>
+  <tr>
+    <td>Report wording and tables.</td>
+    <td>Cross-checked every number and claim against command output and screenshots; removed claims that were not reproducible.</td>
+  </tr>
+</table>
+<p>
+  I did <strong>not</strong> verify a live Gemini interview or the audio pipeline end to end; that is outside this
+  slice and stated as a limitation. I also did not commit a real API key, a production secret, or real candidate
+  PII. The demo assessor credential is a development-only seed value, overridable by environment variable, and
+  the seed is not run in production.
+</p>
+
+<h2>12. Claimed depth (balanced)</h2>
+<div class="grid">
+  <div class="card">
+    <h4>Deep — I can defend this line by line</h4>
+    <ul>
+      <li>Invite state precedence and every transition.</li>
+      <li>Token rotation vs extension and why old links must die.</li>
+      <li>Tenant-scoped authorization at the query layer.</li>
+      <li>Candidate error taxonomy and copy.</li>
+      <li>Consent as a server-side fact, not a UI flag.</li>
+      <li>Tests, seeded faults, and CI configuration.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Shallow — deliberately not claimed</h4>
+    <ul>
+      <li>Live audio capture and Gemini conversation quality.</li>
+      <li>Sidekiq/Redis job reliability and retries.</li>
+      <li>Portfolio generation and fit/gap quality.</li>
+      <li>Production email deliverability.</li>
+      <li>Compliance-grade audit retention.</li>
+      <li>Full accessibility audit beyond keyboard-reachable controls.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>13. Limitations and next steps</h2>
+<ol>
+  <li><strong>No resume flow.</strong> Refreshing an in-progress interview shows a blocked, honest state. A signed resume token scoped to the live session is the next step.</li>
+  <li><strong>No email delivery.</strong> The assessor still copies the link manually. A mailer with bounce handling belongs with the invitation service.</li>
+  <li><strong>Expiry is read-time only.</strong> That is correct for access control, but a sweeper should eventually notify assessors before a link lapses.</li>
+  <li><strong>Consent copy needs legal review.</strong> The mechanism and timestamps are in place; the wording is a product/legal decision under UU PDP.</li>
+  <li><strong>Token in URL.</strong> 256-bit entropy and rotation reduce risk, but URLs can leak through history or referrers. Consider a one-time exchange for a short-lived session cookie on first load.</li>
+  <li><strong>CORS is permissive in the sample.</strong> <code>ALLOWED_ORIGINS: "*"</code> is fine for local development and must be restricted before production.</li>
+  <li><strong>Invitations are one-per-session.</strong> Move to an <code>invitations</code> aggregate when multiple invites or audit-grade history are required (Option B above).</li>
+</ol>
+
+<div class="pagebreak"></div>
+<h2>14. Screenshots</h2>
+<p class="small">All screenshots are from the running app with deterministic seed data. The assessor list shows every invite state side by side; candidate states use the real API responses. Mobile captures are 390×844 at 2× scale.</p>
+
+<figure>
+  <img src="screenshots/01-assessor-invite-states.png" alt="Assessor invite page with six candidates in different invite states" />
+  <figcaption><strong>01 — Assessor invite management.</strong> Six candidates across pending, expired, revoked, live, completed, and failed. Each row shows only the actions valid for its state, plus expiry for time-bound links.</figcaption>
+</figure>
+
+<figure>
+  <img src="screenshots/02-assessor-revoke-confirmation.png" alt="Revoke confirmation dialog" />
+  <figcaption><strong>02 — Revocation is deliberate.</strong> The confirmation explains the candidate-visible consequence and keeps the link by default.</figcaption>
+</figure>
+
+<div class="shot-grid">
+  <figure>
+    <img src="screenshots/03-candidate-consent-en.png" alt="Candidate consent gate in English" />
+    <figcaption><strong>03 — Consent, English.</strong> Continue stays disabled until the candidate opts in.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/04-candidate-consent-id.png" alt="Candidate consent gate in Indonesian" />
+    <figcaption><strong>04 — Consent, Bahasa Indonesia.</strong> Same mechanism, localised copy for the target market.</figcaption>
+  </figure>
+</div>
+
+<div class="shot-grid">
+  <figure>
+    <img src="screenshots/05-candidate-link-expired.png" alt="Expired interview link state" />
+    <figcaption><strong>05 — Expired.</strong> Says the link expired and asks the hiring team for a reissue. No false completion.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/06-candidate-link-revoked.png" alt="Revoked interview link state" />
+    <figcaption><strong>06 — Revoked.</strong> Explains that the hiring team withdrew the link.</figcaption>
+  </figure>
+</div>
+
+<div class="shot-grid">
+  <figure>
+    <img src="screenshots/07-candidate-link-completed.png" alt="Completed interview link state" />
+    <figcaption><strong>07 — Completed.</strong> The only screen that tells the candidate they are done.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/08-candidate-link-in-progress.png" alt="In-progress interview link state" />
+    <figcaption><strong>08 — In progress.</strong> Prevents a second interview from the same link and offers a safe next step.</figcaption>
+  </figure>
+</div>
+
+<div class="shot-grid">
+  <figure>
+    <img src="screenshots/09-candidate-link-not-found.png" alt="Invalid interview link state" />
+    <figcaption><strong>09 — Not found.</strong> A truncated or guessed link is rejected without confirming anything.</figcaption>
+  </figure>
+  <figure>
+    <img src="screenshots/10-candidate-network-error.png" alt="Network error state with retry" />
+    <figcaption><strong>10 — Connection failure.</strong> The only state that offers retry, because the link may still be valid.</figcaption>
+  </figure>
+</div>
+
+<figure>
+  <img src="screenshots/11-assessor-reissued-link.png" alt="Reissued invite link banner" />
+  <figcaption><strong>11 — Reissue.</strong> A fresh token and expiry window. The UI states explicitly that previous links stay invalid.</figcaption>
+</figure>
+
+<div class="shot-grid">
+  <figure class="mobile">
+    <img src="screenshots/12-mobile-candidate-expired.png" alt="Mobile expired link state" />
+    <figcaption><strong>12 — Mobile candidate state.</strong> No horizontal overflow at 390px.</figcaption>
+  </figure>
+  <figure class="mobile">
+    <img src="screenshots/13-mobile-assessor-invite.png" alt="Mobile assessor invite list" />
+    <figcaption><strong>13 — Mobile assessor list.</strong> Rows stack; status and actions stay reachable.</figcaption>
+  </figure>
+</div>
+
+<h2>15. How to run and review</h2>
+<h3>Local setup</h3>
+<pre># API
+cd api
+bundle install
+cp config/application.yml.sample config/application.yml   # fill in DB + secret
+bundle exec rails db:create db:migrate db:seed
+bundle exec rails runner db/seeds_demo.rb
+bundle exec rails s -p 3001
+
+# Web (separate terminal)
+cd web
+npm install
+cp .env.example .env        # point VITE_API_BASE_URL at :3001
+npm run dev                 # http://localhost:5173</pre>
+<p class="small">
+  On Apple Silicon, Rails 7 + Puma may need
+  <code>OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES</code>. The report's demo used Ruby 3.3.13 locally;
+  CI pins the Gemfile's 3.3.2.
+</p>
+<h3>Demo accounts and data</h3>
+<pre>Assessor login : assessor@example.test / demo-password-123  (development seed only)
+Assessment     : Senior Frontend Engineer
+Candidates     : Ahmad (fresh), Siti (expired), Dewi (revoked),
+                 Rizky (live), Budi (completed + portfolio), Nadia (failed)</pre>
+<h3>Verification commands</h3>
+<pre>cd api && bundle exec rspec
+cd web && npm test && npm run build</pre>
+<h3>What to look at first</h3>
+<ol>
+  <li>Open <code>/assessments/&lt;id&gt;/invite</code> and compare the six rows. Try revoke, then reissue.</li>
+  <li>Open a fresh candidate link: consent must block the device check until ticked; switch to Bahasa.</li>
+  <li>Open the expired and revoked links: confirm the message is specific and no “complete” claim appears.</li>
+  <li>Read the cross-tenant specs and the seeded-fault logs.</li>
+</ol>
+
+<div class="signature">
+  <strong>Statement of ownership.</strong> I can explain the design and every changed line, including the
+  trade-offs I rejected. The submission does not weaken or delete existing assertions; the baseline contained
+  none. No real secrets or candidate PII are committed. AI assistance is disclosed and verified above.
+</div>
+
+</body>
+</html>

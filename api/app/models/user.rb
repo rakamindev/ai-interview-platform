@@ -3,7 +3,9 @@
 class User < ApplicationRecord
   has_secure_password
 
-  ROLES = %w[admin user].freeze
+  # Assessors are the people who run interviews; admins are a superset.
+  ASSESSOR_ROLES = %w[admin assessor].freeze
+  ROLES = (ASSESSOR_ROLES + %w[user]).freeze
 
   validates :email, presence: true,
                     uniqueness: { case_sensitive: false },

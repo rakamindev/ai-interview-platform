@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = find_portfolio!(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +101,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = find_portfolio!(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -127,7 +127,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = find_portfolio!(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -147,14 +147,22 @@ module Api
         json_error("Session not found", :not_found)
       end
 
+      # A portfolio belongs to a tenant through its session. Looking it up by a
+      # bare global id let any assessor read another tenant's candidate data.
+      def find_portfolio!(id)
+        Portfolio.joins(:session)
+                 .where(sessions: { tenant_id: current_tenant_id })
+                 .find(id)
+      rescue ActiveRecord::RecordNotFound
+        raise ActiveRecord::RecordNotFound, "Portfolio not found"
+      end
+
       def set_portfolio
-        # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
-        if @session
-          @portfolio = @session.portfolio
-        else
-          @portfolio = Portfolio.find(params[:id])
-        end
+        @portfolio = if @session
+                       @session.portfolio
+                     else
+                       find_portfolio!(params[:id])
+                     end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
