@@ -3,35 +3,90 @@ import { render, screen, within } from "@testing-library/react";
 import ComparisonTable from "./ComparisonTable";
 import type { SkillComparison } from "@/types";
 
-// Data diambil dari respons nyata GET /api/v1/portfolios/:id/fitgap/:vacancy_id
-// (skill & level fiktif dari uji alur lokal).
-const comparisons = [
-  { skill_label: "Database Design & SQL", expected_level: 3, candidate_level: 3, result: "match", delta: 0 },
-  { skill_label: "RESTful API Design", expected_level: 3, candidate_level: 2, result: "gap", delta: -1 },
-] as unknown as SkillComparison[];
+// Bentuk baris mengikuti respons GET /api/v1/portfolios/:id/fitgap/:vacancy_id
+// setelah perbaikan F-06/F-07 (data fiktif).
+const rows: SkillComparison[] = [
+  {
+    skill_label: "Database Design & SQL",
+    required_level: 3,
+    candidate_level: 3,
+    ai_level: 3,
+    is_override: false,
+    override_reason: null,
+    result: "match",
+    delta: 0,
+  },
+  {
+    skill_label: "RESTful API Design",
+    required_level: 3,
+    candidate_level: 2,
+    ai_level: 3,
+    is_override: true,
+    override_reason: "Jawaban versioning masih teoretis, belum ada contoh nyata.",
+    result: "gap",
+    delta: -1,
+  },
+];
+
+function bodyRows() {
+  // baris pertama adalah header
+  return screen.getAllByRole("row").slice(1);
+}
+
+function cells(row: HTMLElement) {
+  return within(row).getAllByRole("cell");
+}
 
 describe("ComparisonTable", () => {
   it("renders one row per compared skill", () => {
-    render(<ComparisonTable comparisons={comparisons} />);
+    render(<ComparisonTable comparisons={rows} />);
 
-    const rows = screen.getAllByRole("row");
-    // 1 baris header + 2 baris skill
-    expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getByText("Database Design & SQL")).toBeInTheDocument();
-    expect(within(rows[2]).getByText("RESTful API Design")).toBeInTheDocument();
+    expect(bodyRows()).toHaveLength(2);
+    expect(within(bodyRows()[0]).getByText("Database Design & SQL")).toBeInTheDocument();
   });
 
-  it("summarises matches and gaps", () => {
-    render(<ComparisonTable comparisons={comparisons} />);
+  it("shows the level required by the vacancy (F-06)", () => {
+    render(<ComparisonTable comparisons={rows} />);
+
+    expect(cells(bodyRows()[0])[1]).toHaveTextContent("L3");
+    expect(cells(bodyRows()[1])[1]).toHaveTextContent("L3");
+  });
+
+  it("falls back to expected_level for reports generated before the fix", () => {
+    const legacy = [
+      { skill_label: "Database Design & SQL", expected_level: 4, candidate_level: 3, result: "gap", delta: -1 },
+    ] as unknown as SkillComparison[];
+
+    render(<ComparisonTable comparisons={legacy} />);
+
+    expect(cells(bodyRows()[0])[1]).toHaveTextContent("L4");
+    expect(screen.queryByText(/corrected/i)).not.toBeInTheDocument();
+  });
+
+  it("marks assessor-corrected levels with the original AI level and the reason (F-07)", () => {
+    render(<ComparisonTable comparisons={rows} />);
+
+    const corrected = cells(bodyRows()[1])[2];
+    expect(corrected).toHaveTextContent("L2");
+    expect(within(corrected).getByText(/corrected/i)).toBeInTheDocument();
+    expect(within(corrected).getByText("AI L3")).toBeInTheDocument();
+
+    const notes = screen.getByRole("list", { name: /assessor corrections/i });
+    expect(within(notes).getByText(/RESTful API Design/)).toBeInTheDocument();
+    expect(within(notes).getByText(/Jawaban versioning masih teoretis/)).toBeInTheDocument();
+  });
+
+  it("does not mark rows that the assessor did not correct", () => {
+    render(<ComparisonTable comparisons={rows} />);
+
+    expect(within(cells(bodyRows()[0])[2]).queryByText(/corrected/i)).not.toBeInTheDocument();
+  });
+
+  it("summarises matches and gaps and shows the gap size", () => {
+    render(<ComparisonTable comparisons={rows} />);
 
     expect(screen.getByText(/Match: 1 skill$/)).toBeInTheDocument();
     expect(screen.getByText(/Gap: 1 skill$/)).toBeInTheDocument();
-  });
-
-  it("shows the gap size on the result badge", () => {
-    render(<ComparisonTable comparisons={comparisons} />);
-
-    const gapRow = screen.getAllByRole("row")[2];
-    expect(within(gapRow).getByText(/-1/)).toBeInTheDocument();
+    expect(within(bodyRows()[1]).getByText(/-1/)).toBeInTheDocument();
   });
 });
