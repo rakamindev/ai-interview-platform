@@ -170,6 +170,7 @@ module Api
       end
 
       def portfolio_json(portfolio)
+        current_keys = portfolio.portfolio_skills.pluck(:skill_key).to_set
         {
           id:                portfolio.id,
           session_id:        portfolio.session_id,
@@ -181,7 +182,8 @@ module Api
           latest_generation:  portfolio.latest_generation && generation_json(portfolio.latest_generation),
           regenerate:         regenerate_json(portfolio),
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
-          overrides:         portfolio.assessor_overrides.map(&method(:override_json))
+          overrides:         portfolio.assessor_overrides.includes(:portfolio_skill)
+                                      .map { |o| override_json(o, portfolio, current_keys) }
         }
       end
 
@@ -225,7 +227,10 @@ module Api
         }
       end
 
-      def override_json(override)
+      # `orphaned`: the skill this decision is about is not in the current report any more. A decision
+      # can sit on an older report's row and still not be orphaned (e.g. superseded by a newer
+      # decision for the same skill), so this is decided by skill_key, not by the row's generation.
+      def override_json(override, portfolio = nil, current_keys = nil)
         {
           id:             override.id,
           portfolio_skill_id: override.portfolio_skill_id,
@@ -233,7 +238,13 @@ module Api
           override_level: override.override_level,
           assessor_notes: override.assessor_notes,
           overridden_by:  override.overridden_by,
-          overridden_at:  override.overridden_at
+          overridden_at:  override.overridden_at,
+          needs_review:   override.needs_review,
+          review_reason:  override.review_reason,
+          first_made_on_generation_id: override.first_made_on_generation_id,
+          last_decided_on_generation_id:    override.last_decided_on_generation_id,
+          skill_label:    override.portfolio_skill.skill_label,
+          orphaned:       current_keys ? !current_keys.include?(override.portfolio_skill.skill_key) : false
         }
       end
 

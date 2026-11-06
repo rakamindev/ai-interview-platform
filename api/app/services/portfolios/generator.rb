@@ -229,9 +229,44 @@ module Portfolios
         end
 
         insert_skills!(data)
+        carry_overrides_forward!
         @portfolio.update!(current_generation: @generation, generation_status: 'complete',
                            generated_at: Time.current, generation_error: nil)
         @generation.update!(status: 'succeeded', finished_at: Time.current, **provider_meta)
+      end
+    end
+
+    # G3: move every human override onto this generation's skill with the same identity. The human
+    # level is never changed. If the AI now proposes a different level than the one the assessor saw,
+    # or the skill is gone, the override is flagged so a person looks at it again. An override is never
+    # attached to a different skill, however similar its name.
+    #
+    # Older data may hold several decisions for one skill (from before one-decision-per-skill). The
+    # newest carries forward and is flagged as conflicting; the others stay on their original rows,
+    # flagged as superseded. No human decision is deleted.
+    def carry_overrides_forward!
+      new_skills = @generation.portfolio_skills.reload.index_by(&:skill_key)
+      overrides  = AssessorOverride.joins(:portfolio_skill)
+                                   .where(portfolio_skills: { portfolio_id: @portfolio.id })
+                                   .where.not(portfolio_skills: { generation_id: @generation.id })
+                                   .includes(:portfolio_skill).to_a
+
+      overrides.group_by { |o| o.portfolio_skill.skill_key }.each do |skill_key, decisions|
+        # Tie-break rule: the latest overridden_at wins; if two timestamps are identical, the higher
+        # id (the decision recorded later) wins. Deterministic, and covered by a test.
+        newest, *older = decisions.sort_by { |o| [o.overridden_at || Time.at(0), o.id] }.reverse
+        older.each { |o| o.update!(needs_review: true, review_reason: 'superseded_by_newer_decision') }
+
+        new_skill = new_skills[skill_key]
+        if new_skill.nil?
+          newest.update!(needs_review: true, review_reason: 'skill_missing_in_current')
+        elsif older.any?
+          newest.update!(portfolio_skill_id: new_skill.id, needs_review: true, review_reason: 'conflicting_decisions')
+        else
+          changed = new_skill.ai_level != newest.ai_level
+          newest.update!(portfolio_skill_id: new_skill.id, needs_review: changed,
+                         review_reason: changed ? 'ai_level_changed' : nil)
+        end
       end
     end
 

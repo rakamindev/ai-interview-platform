@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_06_100001) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_06_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -63,6 +63,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_100001) do
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
+    t.boolean "needs_review", default: false, null: false
+    t.string "review_reason"
+    t.bigint "first_made_on_generation_id"
+    t.bigint "last_decided_on_generation_id"
+    t.index ["first_made_on_generation_id"], name: "index_assessor_overrides_on_first_made_on_generation_id"
+    t.index ["last_decided_on_generation_id"], name: "index_assessor_overrides_on_last_decided_on_generation_id"
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
@@ -234,6 +240,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_100001) do
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessor_overrides", "portfolio_generations", column: "first_made_on_generation_id"
+  add_foreign_key "assessor_overrides", "portfolio_generations", column: "last_decided_on_generation_id"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
