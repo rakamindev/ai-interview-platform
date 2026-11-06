@@ -13,7 +13,7 @@ class AssessorOverride < ApplicationRecord
   # superseded_by_newer_decision: an older conflicting decision, kept for the record, not active
   REVIEW_REASONS = %w[ai_level_changed skill_missing_in_current conflicting_decisions superseded_by_newer_decision].freeze
 
-  validates :ai_level,       numericality: { only_integer: true, in: 1..5 }
+  validates :ai_level,       numericality: { only_integer: true, in: 1..5 }, allow_nil: true # nil: skill was Not rated
   validates :override_level, numericality: { only_integer: true, in: 1..5 }
   validates :overridden_by,  presence: true
   validates :review_reason,  inclusion: { in: REVIEW_REASONS }, allow_nil: true

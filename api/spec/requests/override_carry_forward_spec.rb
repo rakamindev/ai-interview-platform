@@ -56,19 +56,39 @@ RSpec.describe 'Assessor overrides across generations (G3)', type: :request do
     expect(the_override).to have_attributes(override_level: 4, needs_review: true, review_reason: 'ai_level_changed')
   end
 
-  it 'keeps an override whose skill disappeared, flagged, and never attaches it to a similar-looking skill' do
-    rescore_with(model_output(level: 3, quote: quote, label: 'React / Frontend Development'))
+  it 'keeps an override whose (discovered) skill disappeared, flagged, and never attaches it to a similar-looking skill' do
+    # Configured skills can no longer disappear (G1 keeps them as Not rated), so the orphan case is a
+    # discovered skill the AI no longer reports.
+    with_kafka = model_output(level: 3, quote: quote)
+    with_kafka['discovered_skills'] = [{ 'skill_label' => 'Kafka', 'level' => 2, 'evidence' => [quote],
+                                         'competency_summary' => 'Discussed event streaming' }]
+    rescore_with(with_kafka)
+    kafka = portfolio.portfolio_skills.find_by(skill_label: 'Kafka')
+    save_override(kafka, level: 3, notes: 'Stronger on streaming than rated')
+    kafka_override = AssessorOverride.find_by(portfolio_skill_id: kafka.id)
 
-    expect(current_skill.skill_label).to eq('React / Frontend Development')
-    expect(the_override.portfolio_skill.generation_id).to eq(portfolio.generations.first.id)
-    expect(the_override).to have_attributes(override_level: 4, needs_review: true,
-                                            review_reason: 'skill_missing_in_current')
+    renamed = model_output(level: 3, quote: quote)
+    renamed['discovered_skills'] = [{ 'skill_label' => 'Kafka Streams', 'level' => 2, 'evidence' => [quote],
+                                      'competency_summary' => 'Discussed event streaming' }]
+    rescore_with(renamed)
+
+    expect(kafka_override.reload.portfolio_skill_id).to eq(kafka.id) # stays on its original row
+    expect(kafka_override).to have_attributes(override_level: 3, needs_review: true,
+                                              review_reason: 'skill_missing_in_current')
 
     get "/api/v1/sessions/#{session.id}/portfolio", headers: auth_headers(org)
-    listed = JSON.parse(response.body).dig('portfolio', 'overrides').sole
-    expect(listed).to include('override_level' => 4, 'needs_review' => true, 'orphaned' => true)
+    listed = JSON.parse(response.body).dig('portfolio', 'overrides').find { |o| o['id'] == kafka_override.id }
+    expect(listed).to include('override_level' => 3, 'needs_review' => true, 'orphaned' => true)
   end
 
+  it 'carries an override to a configured skill the AI left out (now Not rated) and flags it' do
+    omitted = { 'configured_skills' => [], 'discovered_skills' => [] }
+    rescore_with(omitted)
+
+    expect(current_skill).to have_attributes(ai_level: nil, ai_level_reason: 'ai_omitted')
+    expect(the_override).to have_attributes(portfolio_skill_id: current_skill.id, override_level: 4,
+                                            needs_review: true, review_reason: 'ai_level_changed')
+  end
   it 'clears the review flag when the assessor saves the override again, recording the new AI level' do
     rescore_with(model_output(level: 2, quote: quote))
     save_override(current_skill, level: 4, notes: 'Still L4 after re-score')

@@ -222,9 +222,11 @@ module Api
           skill_id:          skill.skill_id,
           skill_label:       skill.skill_label,
           is_discovered:     skill.is_discovered,
-          ai_level:          skill.ai_level,
-          ai_confidence:     skill.ai_confidence,
+          ai_level:          skill.ai_level,          # nil = Not rated
+          ai_level_reason:   skill.ai_level_reason,   # why it is Not rated
+          ai_confidence:     skill.ai_confidence,     # from the PRD rule (coverage), not from the model
           evidence:          skill.evidence_quotes,
+          evidence_checks:   skill.evidence_checks,   # textual provenance per quote, not competency proof
           competency_summary: skill.competency_summary
         }
       end

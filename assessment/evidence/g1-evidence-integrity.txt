@@ -1,0 +1,42 @@
+# G1 (evidence integrity): red run before implementing, 2026-11-06 ~18:15 WIB
+# Command: bundle exec rspec spec/requests/evidence_integrity_spec.rb
+14 examples, 13 failures
+rspec ./spec/requests/evidence_integrity_spec.rb:127 # Evidence integrity of AI portfolio output (G1) confidence is medium for a partially covered skill
+rspec ./spec/requests/evidence_integrity_spec.rb:118 # Evidence integrity of AI portfolio output (G1) confidence is calculated from the PRD rule, not taken from the model
+rspec ./spec/requests/evidence_integrity_spec.rb:51 # Evidence integrity of AI portfolio output (G1) levels shows a configured skill the AI left out as Not rated (ai_omitted), so it cannot quietly vanish
+rspec ./spec/requests/evidence_integrity_spec.rb:37 # Evidence integrity of AI portfolio output (G1) levels stores a missing level as Not rated, never as L1
+rspec ./spec/requests/evidence_integrity_spec.rb:44 # Evidence integrity of AI portfolio output (G1) levels stores an out-of-range or non-numeric level as Not rated with a reason
+rspec ./spec/requests/evidence_integrity_spec.rb:59 # Evidence integrity of AI portfolio output (G1) skill identity rejects a "configured" skill that is not in the assessment, and records the rejection
+rspec ./spec/requests/evidence_integrity_spec.rb:67 # Evidence integrity of AI portfolio output (G1) skill identity stores the assessment's own skill id and label, not the ones the AI echoed back (W11)
+rspec ./spec/requests/evidence_integrity_spec.rb:104 # Evidence integrity of AI portfolio output (G1) quote provenance matches a quote that spans two consecutive candidate turns
+rspec ./spec/requests/evidence_integrity_spec.rb:83 # Evidence integrity of AI portfolio output (G1) quote provenance marks a quote found in the candidate's words (ignoring case and punctuation) as a transcript match
+rspec ./spec/requests/evidence_integrity_spec.rb:88 # Evidence integrity of AI portfolio output (G1) quote provenance marks a quote with a changed word as no exact match, with only a suggested location
+rspec ./spec/requests/evidence_integrity_spec.rb:94 # Evidence integrity of AI portfolio output (G1) quote provenance marks an invented quote as not found
+rspec ./spec/requests/evidence_integrity_spec.rb:99 # Evidence integrity of AI portfolio output (G1) quote provenance does not count words the interviewer said as candidate evidence
+rspec ./spec/requests/evidence_integrity_spec.rb:110 # Evidence integrity of AI portfolio output (G1) quote provenance records quote counts on the generation for later analysis
+# (the downstream override/fit-gap example passed on the old code too, because missing levels were coerced to L1 there)
+
+# GREEN after implementing, entire suite (bundle exec rspec --seed 39486), Fri Nov  6 18:26:31 WIB 2026:
+Evidence integrity of AI portfolio output (G1)
+  exposes the Not rated reason and quote checks to the UI
+  levels
+    stores an out-of-range or non-numeric level as Not rated with a reason
+    shows a configured skill the AI left out as Not rated (ai_omitted), so it cannot quietly vanish
+    stores a missing level as Not rated, never as L1
+  quote provenance
+    marks a quote with a changed word as no exact match, with only a suggested location
+    marks a quote found in the candidate's words (ignoring case and punctuation) as a transcript match
+    marks an invented quote as not found
+    records quote counts on the generation for later analysis
+    does not count words the interviewer said as candidate evidence
+    matches a quote that spans two consecutive candidate turns
+  downstream readers keep working with Not rated skills
+    lets the assessor override a Not rated skill, and fit/gap treats an unrated skill as not assessed
+  confidence
+    is calculated from the PRD rule, not taken from the model
+    is medium for a partially covered skill
+  skill identity
+    rejects a "configured" skill that is not in the assessment, and records the rejection
+    stores the assessment's own skill id and label, not the ones the AI echoed back (W11)
+
+73 examples, 0 failures

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_06_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_06_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -58,7 +58,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_120000) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
@@ -140,12 +140,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_06_120000) do
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
     t.bigint "generation_id"
     t.string "skill_key"
+    t.string "ai_level_reason"
+    t.jsonb "evidence_checks", default: [], null: false
     t.index ["generation_id", "skill_key"], name: "index_portfolio_skills_on_generation_id_and_skill_key", unique: true
     t.index ["generation_id"], name: "index_portfolio_skills_on_generation_id"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"

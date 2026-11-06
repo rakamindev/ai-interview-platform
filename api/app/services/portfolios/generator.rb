@@ -275,43 +275,128 @@ module Portfolios
       { served_model: meta&.dig(:served_model), provider_response_id: meta&.dig(:response_id) }
     end
 
+    # G1: only structurally valid output becomes part of the assessment.
+    # - Configured entries must map to a skill of this assessment (by its skill_id, else by exact
+    #   label ignoring case). Anything else is rejected and recorded in generation.validation.
+    #   The stored id/label are the assessment's own, never the ones the model echoed back.
+    # - Every configured skill appears; one the model left out is stored as Not rated (ai_omitted).
+    # - A level that is missing or not an integer 1..5 is stored as Not rated, never coerced to L1.
+    # - Confidence comes from the PRD rule over the coverage map, never from the model.
+    # - Every quote gets a textual-provenance check (Portfolios::QuoteCheck).
+    MAX_DISCOVERED_SKILLS = 10
+    OMITTED_SUMMARY = 'Not rated: the AI returned no assessment for this skill.'
+
     def insert_skills!(data)
-      seen = Set.new
-      (data['configured_skills'] || []).each do |skill_data|
-        add_skill(skill_data, discovered: false, seen: seen)
+      quote_check = QuoteCheck.new(@session.transcript_turns.to_a)
+      report = { 'rejected_skills' => [], 'unrated' => [], 'quote_counts' => Hash.new(0) }
+      matched = {}
+
+      Array(data['configured_skills']).each do |entry|
+        next unless entry.is_a?(Hash)
+
+        configured = find_configured_skill(entry)
+        if configured.nil?
+          report['rejected_skills'] << { 'skill_label' => entry['skill_label'], 'skill_id' => entry['skill_id'],
+                                         'reason' => 'not_in_assessment' }
+          next
+        end
+        next if matched.key?(configured.id) # duplicate entry for the same skill: keep the first
+
+        matched[configured.id] = true
+        create_skill!(key: "assessment_skill:#{configured.id}", label: configured.skill_label,
+                      skill_id: configured.skill_id, discovered: false, entry: entry,
+                      quote_check: quote_check, report: report)
       end
-      (data['discovered_skills'] || []).each do |skill_data|
-        add_skill(skill_data, discovered: true, seen: seen)
+
+      configured_skills.reject { |c| matched.key?(c.id) }.each do |configured|
+        create_skill!(key: "assessment_skill:#{configured.id}", label: configured.skill_label,
+                      skill_id: configured.skill_id, discovered: false, entry: nil,
+                      quote_check: quote_check, report: report)
       end
+
+      discovered_keys = Set.new
+      configured_labels = configured_skills.map { |c| c.skill_label.downcase }
+      Array(data['discovered_skills']).each do |entry|
+        next unless entry.is_a?(Hash)
+
+        label = entry['skill_label'].to_s.strip
+        key = "discovered:#{normalize_label(label)}"
+        if label.empty? || configured_labels.include?(label.downcase) || discovered_keys.size >= MAX_DISCOVERED_SKILLS
+          report['rejected_skills'] << { 'skill_label' => entry['skill_label'], 'reason' => 'invalid_discovered_skill' }
+          next
+        end
+        next unless discovered_keys.add?(key)
+
+        create_skill!(key: key, label: label, skill_id: nil, discovered: true, entry: entry,
+                      quote_check: quote_check, report: report)
+      end
+
+      @generation.update!(validation: @generation.validation.merge(
+        'rejected_skills' => report['rejected_skills'], 'unrated' => report['unrated'],
+        'quote_counts' => report['quote_counts']
+      ))
     end
 
-    def add_skill(skill_data, discovered:, seen:)
-      key = skill_key(skill_data, discovered)
-      return if key.nil? || !seen.add?(key)
+    def create_skill!(key:, label:, skill_id:, discovered:, entry:, quote_check:, report:)
+      level, reason = entry ? parse_level(entry['level']) : [nil, 'ai_omitted']
+      report['unrated'] << { 'skill_label' => label, 'reason' => reason } if reason
+
+      quotes = entry ? Array(entry['evidence']).map(&:to_s).reject(&:blank?).first(3) : []
+      checks = quotes.map { |q| quote_check.check(q) }
+      checks.each { |c| report['quote_counts'][c['status']] += 1 }
+      summary = entry && entry['competency_summary'].presence
 
       @portfolio.all_portfolio_skills.create!(
         generation:         @generation,
         skill_key:          key,
-        skill_id:           discovered ? nil : skill_data['skill_id'],
-        skill_label:        skill_data['skill_label'],
+        skill_id:           skill_id,
+        skill_label:        label,
         is_discovered:      discovered,
-        ai_level:           skill_data['level'].to_i.clamp(1, 5),
-        ai_confidence:      skill_data['confidence'],
-        evidence:           Array(skill_data['evidence']).first(3),
-        competency_summary: skill_data['competency_summary']
+        ai_level:           level,
+        ai_level_reason:    reason,
+        ai_confidence:      confidence_for(label, discovered),
+        evidence:           quotes,
+        evidence_checks:    checks,
+        competency_summary: summary || OMITTED_SUMMARY
       )
     end
 
-    # Stable identity for a skill across generations, used to carry human overrides forward.
-    def skill_key(skill_data, discovered)
-      label = skill_data['skill_label'].to_s
-      return nil if label.strip.empty?
-      return "discovered:#{normalize_label(label)}" if discovered
+    # Accepts an integer 1..5, or a string that is exactly such an integer ("3"). Anything else,
+    # including "L3", 3.5 or "high", is invalid rather than guessed at.
+    def parse_level(raw)
+      return [nil, 'missing_level'] if raw.nil? || (raw.is_a?(String) && raw.strip.empty?)
 
-      configured = configured_skills.find do |s|
-        (s.skill_id.present? && s.skill_id == skill_data['skill_id']) || s.skill_label.casecmp?(label)
-      end
-      configured ? "assessment_skill:#{configured.id}" : "label:#{normalize_label(label)}"
+      value = case raw
+              when Integer then raw
+              when String  then raw.strip.match?(/\A[1-5]\z/) ? raw.strip.to_i : nil
+              end
+      value && (1..5).cover?(value) ? [value, nil] : [nil, 'invalid_level']
+    end
+
+    # PRD 01 §5, applied in order:
+    #   high   — probe_count >= 3 AND state = covered
+    #   medium — probe_count = 2 OR state = partial
+    #   low    — everything else (probe_count <= 1 OR state = initiated / not_yet, or no coverage data)
+    # The PRD's medium and low conditions overlap (e.g. probe_count 2 with state initiated). The rules
+    # are applied top to bottom, so that case is medium. This is reported as an ambiguity.
+    def confidence_for(label, discovered)
+      map = coverage_maps.find { |m| m.is_discovered == discovered && m.skill_label.casecmp?(label) }
+      return 'low' unless map
+      return 'high' if map.probe_count >= 3 && map.state == 'covered'
+      return 'medium' if map.probe_count == 2 || map.state == 'partial'
+
+      'low'
+    end
+
+    def coverage_maps
+      @coverage_maps ||= @session.coverage_maps.to_a
+    end
+
+    def find_configured_skill(entry)
+      id = entry['skill_id'].to_s
+      label = entry['skill_label'].to_s
+      configured_skills.find { |s| s.skill_id.present? && s.skill_id == id } ||
+        configured_skills.find { |s| s.skill_label.casecmp?(label) }
     end
 
     def configured_skills

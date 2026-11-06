@@ -7,7 +7,7 @@ module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
-    LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
+    LEVEL_LABELS = Hash.new('Not rated').merge(1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5').freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
     RESULT_LABELS = {
       'match'        => 'Match',
