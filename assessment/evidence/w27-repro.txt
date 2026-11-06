@@ -1,0 +1,50 @@
+# W27 reproduction (test database, synthetic data, 06 Nov 20:12)
+Throwaway request spec drives the real endpoints, then Sessions::StartHandler (what the audio WebSocket calls on open).
+
+[exact duplicate]
+  POST /assessments ["React", "React"] -> 201
+  skills stored: ["React", "React"]
+  POST /sessions -> 201
+  before start: status=pending coverage_maps=0
+  StartHandler raised ActiveRecord::RecordNotUnique: PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_coverage_maps_on_session_id_and_skill_label"
+  after start:  status=pending coverage_maps=0
+[case-only duplicate]
+  POST /assessments ["React", "react"] -> 201
+  POST /sessions -> 201
+  before start: status=pending coverage_maps=0
+  StartHandler: OK
+  after start:  status=active coverage_maps=2
+[control]
+  POST /assessments ["React", "Communication"] -> 201
+  POST /sessions -> 201
+  before start: status=pending coverage_maps=0
+  StartHandler: OK
+  after start:  status=active coverage_maps=2
+3 examples, 0 failures
+
+What the candidate sees (from reading the code, not observed live): the exception is rescued in AudioWebSocketMiddleware#handle_browser_open, which closes the
+socket with no message. The web app retries the connection; every retry fails the same way; after the last retry the
+page shows the 'interview didn't finish' screen (before 1861b3b it said 'Interview Complete ... recorded').
+
+## Regression spec before the fix (spec/requests/assessment_skill_uniqueness_spec.rb)
+  1) Duplicate skills in an assessment (W27) updating rejects adding a skill that is already listed
+       expected the response to have status code :unprocessable_entity (422) but it was :ok (200)
+  2) Duplicate skills in an assessment (W27) updating rejects renaming a skill to match another
+       expected the response to have status code :unprocessable_entity (422) but it was :ok (200)
+  3) Duplicate skills in an assessment (W27) creating rejects an exact duplicate with a message naming the skill
+       expected `Assessment::ActiveRecord_Relation#count` not to have changed, but did change from 0 to 1
+  4) Duplicate skills in an assessment (W27) creating treats case-only and whitespace-only differences as the same skill
+       expected the response to have status code :unprocessable_entity (422) but it was :created (201)
+7 examples, 4 failures
+Failed examples:
+
+## After the fix
+Regression spec: 7 examples, 0 failures. Full suite: 91 examples, 0 failures.
+Same reproduction, assessment create step:
+[exact duplicate]
+  POST /assessments ["React", "React"] -> 422
+[case-only duplicate]
+  POST /assessments ["React", "react"] -> 422
+[control]
+  POST /assessments ["React", "Communication"] -> 201
+(The duplicate assessments are no longer saved, so no invite or interview can be created for them.)
