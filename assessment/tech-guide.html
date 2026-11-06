@@ -1,0 +1,507 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 40px 20px; font-size: 11pt; color: #1a202c; }
+  h1, h2, h3, h4 { color: #0f172a; margin-top: 1.8em; }
+  h1 { border-bottom: 2px solid #0f766e; padding-bottom: .3em; }
+  h2 { border-bottom: 1px solid #cbd5e1; padding-bottom: .2em; }
+  code { background: #f1f5f9; padding: .1em .4em; border-radius: 3px; font-family: SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; }
+  pre { background: #0b1220; color: #e2e8f0; padding: 1em; border-radius: 6px; overflow: auto; font-size: .85em; }
+  pre code { background: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: .9em; }
+  th, td { border: 1px solid #cbd5e1; padding: .4em .6em; text-align: left; }
+  th { background: #f0fdfa; color: #115e59; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  blockquote { background: #f0fdfa; border-left: 4px solid #0f766e; padding: .8em 1.2em; margin: 1.5em 0; color: #115e59; }
+  ul { padding-left: 1.5em; }
+  li { margin: .3em 0; }
+  hr { border: none; border-top: 1px solid #cbd5e1; margin: 2em 0; }
+  .meta { color: #475569; font-size: .9em; }
+</style>
+</head>
+<body>
+<h1>Technical Interview Guide: Candidate Trust at the Invite Boundary</h1>
+<p class="meta"><strong>Purpose:</strong> A line-by-line, decision-by-decision walkthrough of the PR so you can explain <em>what</em> you did, <em>why</em> you did it, and <em>how</em> it works. Use this as your cheat-sheet during the interview.</p>
+
+<h2>1. The Slice in One Sentence</h2>
+<blockquote>
+<p><strong>&ldquo;Invite lifecycle + tenant security&rdquo;</strong> &mdash; make interview links expire, revocable, re-issuable, and honest about their state; record explicit consent; and ensure an assessor can never touch another tenant&rsquo;s portfolio.</p>
+</blockquote>
+<p><strong>Why this slice?</strong> Highest leverage for a one-day deadline: touches auth, privacy, candidate trust, assessor workflow, and is 100 % demo-able without a Gemini key.</p>
+
+<h2>2. Problem &rarr; Fix Map (The &ldquo;Before vs After&rdquo;)</h2>
+<table>
+<tr><th>Area</th><th>Baseline (Broken)</th><th>What I Shipped</th></tr>
+<tr><td>Invite URL</td><td>Built with <code>APP_BASE_URL</code> (API origin) &rarr; 404</td><td><code>WEB_BASE_URL</code> / <code>CANDIDATE_BASE_URL</code> &rarr; React route <code>/interview/:token</code></td></tr>
+<tr><td>Expiry</td><td>None &mdash; links lived forever</td><td><code>invite_expires_at</code> (default 72 h, configurable via <code>INVITE_TTL_HOURS</code>)</td></tr>
+<tr><td>Revocation</td><td>Impossible</td><td><code>invite_revoked_at</code>; only allowed on <em>pending</em> invites (422 for live/completed)</td></tr>
+<tr><td>Reissue</td><td>N/A</td><td><strong>Token rotation</strong> &mdash; new token, new expiry, old link stays dead, <code>invite_reissued_count++</code></td></tr>
+<tr><td>Candidate states</td><td>Every error &rarr; &ldquo;Interview Complete&rdquo;</td><td>6 distinct states + stable API codes: <code>invite_not_found</code> (404), <code>invite_expired</code> (410), <code>invite_revoked</code> (410), <code>invite_completed</code> (410), <code>invite_in_progress</code> (410), <code>network</code> (0/5xx)</td></tr>
+<tr><td>Consent</td><td>Missing &mdash; mic opened immediately</td><td>Affirmative checkbox, server-recorded <code>consent_given_at</code>, idempotent <code>POST /sessions/:token/consent</code>, EN/ID copy</td></tr>
+<tr><td>Tenant isolation (portfolio)</td><td><code>Portfolio.find(id)</code> &mdash; IDOR</td><td>Lookups join through <code>sessions</code> + filter <code>sessions.tenant_id = current_tenant_id</code>; cross-tenant &rarr; 404</td></tr>
+<tr><td>Tenant isolation (override)</td><td><code>PortfolioSkill.find(id)</code> &mdash; IDOR</td><td>Same pattern</td></tr>
+<tr><td>Assessor role</td><td><code>ASSESSOR_ROLES = %w[admin]</code>; <code>ROLES</code> missing <code>assessor</code></td><td><code>ASSESSOR_ROLES = %w[admin assessor]</code>; <code>ROLES << 'assessor'</code>; login accepts both</td></tr>
+<tr><td>Assessor UI</td><td>Single &ldquo;Awaiting/Live&rdquo; label; no actions for dead links</td><td>Status chips, expiry, copy/revoke for pending, reissue for expired/revoked, monitor for live, results for completed; live-only polling</td></tr>
+<tr><td>Tests</td><td>No runner, no CI</td><td>43 RSpec + 24 Vitest; CI on every push/PR; seeded-fault proof</td></tr>
+<tr><td>Seeded demo</td><td>None</td><td><code>db/seeds_demo.rb</code> &rarr; 6 candidates covering all states + portfolio/fit-gap</td></tr>
+</table>
+
+<h2>3. Backend Deep Dive</h2>
+
+<h3>3.1 Migration</h3>
+<pre><code>add_column :sessions, :invite_expires_at, :datetime
+add_column :sessions, :invite_revoked_at, :datetime
+add_column :sessions, :consent_given_at, :datetime
+add_column :sessions, :invite_reissued_count, :integer, default: 0, null: false
+
+# Backfill: give existing links the same 72 h window from created_at
+execute <<~SQL
+  UPDATE ai_interview.sessions
+  SET invite_expires_at = created_at + INTERVAL '72 hours'
+  WHERE invite_expires_at IS NULL
+SQL
+
+change_column_null :sessions, :invite_expires_at, false
+</code></pre>
+<p><strong>Why additive + reversible?</strong> Zero-risk deploy. No backfill service, no dual-write. <code>down</code> simply drops the four columns.</p>
+<p><strong>Why 72 h default?</strong> Defensible &ldquo;business hours &times; 3&rdquo; window; configurable via <code>INVITE_TTL_HOURS</code> so product/legal can change without code deploy.</p>
+
+<h3>3.2 <code>Session</code> Model &mdash; Core Methods</h3>
+<pre><code># Single source of truth for candidate + assessor
+def invite_status
+  return 'revoked'   if invite_revoked?
+  return 'expired'   if invite_expired?
+  return 'completed' if invite_consumed?   # ended/failed
+  status             # pending, active
+end
+
+def invite_usable?
+  pending? && !invite_expired? && !invite_revoked?
+end
+
+def revoke_invite!
+  update!(invite_revoked_at: Time.current)
+end
+
+# Token rotation &mdash; leaked link stays dead
+def reissue_invite!
+  update!(
+    invite_token:          SecureRandom.hex(32),
+    invite_expires_at:     self.class.invite_ttl_hours.hours.from_now,
+    invite_revoked_at:     nil,
+    invite_reissued_count: invite_reissued_count + 1
+  )
+end
+
+def record_consent!
+  update!(consent_given_at: Time.current) if consent_given_at.nil?
+  consent_given_at
+end
+
+# Candidate-facing URL &mdash; MUST point to React app, not API
+def invite_url
+  base = ENV['WEB_BASE_URL'].presence || ENV['CANDIDATE_BASE_URL'].presence || 'http://localhost:5173'
+  "#{base.to_s.chomp('/')}/interview/#{invite_token}"
+end
+</code></pre>
+<p><strong>Key decisions:</strong></p>
+<ul>
+<li><code>invite_status</code> precedence: revoked > expired > consumed > native status.</li>
+<li><code>reissue_invite!</code> <strong>rotates</strong> the token, does <strong>not</strong> extend. A leaked link must stay dead.</li>
+<li><code>invite_url</code> reads <code>WEB_BASE_URL</code> (prod) &rarr; <code>CANDIDATE_BASE_URL</code> (compat) &rarr; <code>localhost:5173</code> (dev). Documented in <code>application.yml.sample</code>.</li>
+</ul>
+
+<h3>3.3 <code>SessionsController</code> &mdash; Candidate Endpoints</h3>
+<pre><code># GET /sessions/:token/candidate
+def candidate
+  session = Session.find_by!(invite_token: params[:token])
+  # ... precise error codes
+  render json: { ..., invite_status: session.invite_status, ... }
+rescue ActiveRecord::RecordNotFound
+  json_error("Invite not found", :not_found, code: "invite_not_found")
+end
+
+# POST /sessions/:token/consent
+def consent
+  session = Session.find_by!(invite_token: params[:token])
+  return json_error("Link expired", :gone, code: "invite_expired") if session.invite_expired?
+  return json_error("Link revoked", :gone, code: "invite_revoked") if session.invite_revoked?
+  return json_error("Already completed", :gone, code: "invite_completed") if session.invite_consumed?
+  session.record_consent!
+  render json: { consent_given_at: session.consent_given_at, consent_required: false }
+end
+</code></pre>
+<p><strong>Error codes returned:</strong></p>
+<table>
+<tr><th>Situation</th><th>HTTP</th><th><code>code</code></th></tr>
+<tr><td>Token not found</td><td>404</td><td><code>invite_not_found</code></td></tr>
+<tr><td>Expired</td><td>410</td><td><code>invite_expired</code></td></tr>
+<tr><td>Revoked</td><td>410</td><td><code>invite_revoked</code></td></tr>
+<tr><td>Completed</td><td>410</td><td><code>invite_completed</code></td></tr>
+<tr><td>In progress</td><td>410</td><td><code>invite_in_progress</code></td></tr>
+<tr><td>Network/unknown</td><td>0/5xx</td><td><code>network</code> / <code>unknown</code></td></tr>
+</table>
+<p><strong>Why 410 (Gone) for expired/revoked/completed/in-progress?</strong> Semantically &ldquo;resource no longer available&rdquo; &mdash; distinguishes from &ldquo;never existed&rdquo; (404). Frontend maps 410 + code &rarr; precise UI.</p>
+
+<h3>3.4 <code>SessionsController</code> &mdash; Assessor Endpoints</h3>
+<pre><code># POST /sessions/:id/revoke_invite
+def revoke_invite
+  return json_error("Cannot revoke in-progress interview", :unprocessable_entity) if @session.active?
+  return json_error("Cannot revoke completed interview", :unprocessable_entity) if @session.ended? || @session.failed?
+  @session.revoke_invite!
+  render json: { session: @session.as_json(invite_fields) }
+end
+
+# POST /sessions/:id/reissue_invite
+def reissue_invite
+  return json_error("Cannot reissue in-progress interview", :unprocessable_entity) if @session.active?
+  return json_error("Cannot reissue completed interview", :unprocessable_entity) if @session.ended? || @session.failed?
+  @session.reissue_invite!
+  render json: { session: @session.as_json(invite_fields), invite_url: @session.invite_url }
+end
+</code></pre>
+<p><strong>Why 422 for live/completed?</strong> Prevents &ldquo;hide a live interview by revoking it&rdquo; &mdash; the monitor action must stay visible while the interview runs.</p>
+
+<h3>3.5 Tenant Isolation &mdash; Portfolio & Override</h3>
+<pre><code># Before (IDOR)
+def set_portfolio
+  @portfolio = Portfolio.find(params[:id])  # <-- global lookup
+end
+
+# After (tenant-scoped)
+def set_portfolio
+  @portfolio = Portfolio.joins(:session)
+                         .find_by!(id: params[:id], sessions: { tenant_id: current_tenant_id })
+end
+</code></pre>
+<p>Same pattern for <code>PortfolioSkillsController#set_portfolio_skill</code>. Cross-tenant returns <strong>404</strong> (not 403) so the API doesn't confirm foreign resources exist.</p>
+
+<h3>3.6 Auth &mdash; Assessor Role</h3>
+<pre><code># User model
+ROLES = %w[user admin assessor].freeze          # was missing 'assessor'
+ASSESSOR_ROLES = %w[admin assessor].freeze      # was only %w[admin]
+</code></pre>
+<p>Login (<code>AuthenticationController</code>) already accepted both; now model validations agree.</p>
+
+<h3>3.7 Rack::Attack &mdash; Test Mode</h3>
+<pre><code># config/initializers/rack_attack.rb
+if Rails.env.test?
+  Rack::Attack.cache.store = ActiveSupport::Cache::MemoryStore.new
+end
+</code></pre>
+<p>No Redis required in CI.</p>
+
+<h2>4. Frontend Deep Dive</h2>
+
+<h3>4.1 <code>candidateAccess.ts</code> &mdash; Pure Mapping Layer</h3>
+<pre><code>export function resolveCandidateAccessError(status?: number, code?: string): CandidateAccessError {
+  switch (code) {
+    case "invite_not_found": return "not_found";
+    case "invite_expired":   return "expired";
+    case "invite_revoked":   return "revoked";
+    case "invite_completed": return "completed";
+    case "invite_in_progress": return "in_progress";
+  }
+  // Fallback to HTTP status for older responses
+  if (status === 404) return "not_found";
+  if (status === 410) return "expired";
+  if (!status || status === 0 || status >= 500) return "network";
+  return "unknown";
+}
+</code></pre>
+<p><strong>Why separate file?</strong> Zero React deps &rarr; unit-testable in isolation. 10 Vitest cases cover every code path.</p>
+
+<h3>4.2 <code>CandidateAccessState.tsx</code> &mdash; The Honest Screen</h3>
+<pre><code>// Before: .catch(() => setInterviewState("complete")) &mdash; LIED
+// After: explicit mapping &rarr; each state has distinct copy + action
+
+const copy = getCandidateAccessCopy(error, language);
+// expired:  "This interview link has expired" + "Ask hiring team to reissue"
+// revoked:  "This interview link was cancelled" + "Contact hiring team"
+// completed:"You have already completed this interview" (ONLY real completion)
+// in_progress: "Already in progress" + "Contact hiring team to rejoin safely"
+// network:  "Could not reach service" + RETRY button (only state with retry)
+</code></pre>
+<p><strong>Key invariant:</strong> <code>completed</code> copy is <strong>only</strong> reachable from a genuine <code>invite_completed</code> code. The test asserts: <code>expect(screen.getByText(/completed/i)).not.toBeInTheDocument()</code> when error is <code>expired</code>.</p>
+
+<h3>4.3 <code>ConsentGate.tsx</code> &mdash; Affirmative Opt-In</h3>
+<pre><code>const [accepted, setAccepted] = useState(false);
+
+<label>
+  <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />
+  {copy.checkbox}  {/* "I agree to the recording..." */}
+</label>
+
+<Button disabled={!accepted || submitting} onClick={onConsent}>
+  {copy.continue}
+</Button>
+</code></pre>
+<ul>
+<li>Checkbox <strong>must</strong> be ticked (affirmative consent).</li>
+<li><code>disabled</code> until <code>accepted === true</code>.</li>
+<li>Server call <code>POST /sessions/:token/consent</code> is idempotent; refused on dead links (410).</li>
+<li>EN/ID copy via <code>CONSENT_COPY</code> constant.</li>
+</ul>
+
+<h3>4.4 <code>InterviewPage.tsx</code> &mdash; State Machine</h3>
+<pre>
+LOADING &rarr; (accessError) &rarr; CandidateAccessState
+       &rarr; (consentRequired) &rarr; ConsentGate
+       &rarr; (idle) &rarr; HardwareCheck &rarr; "Ready" banner &rarr; Start Interview
+       &rarr; (connecting/active/reconnecting/draining_audio) &rarr; Voice UI
+       &rarr; (complete) &rarr; "Interview Complete" (honest)
+</pre>
+<p>No fake completion. <code>audioComplete</code> retries until success (endpoint now always returns <code>ended: true</code> or error).</p>
+
+<h3>4.5 <code>LanguageToggle</code> + <code>useCandidateLanguage</code></h3>
+<pre><code>function detectLanguage(): CandidateLanguage {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === "en" || stored === "id") return stored;
+  return navigator.language?.toLowerCase().startsWith("id") ? "id" : "en";
+}
+</code></pre>
+<p>Persists to <code>localStorage</code>, sets <code>document.documentElement.lang</code>. Default <code>id</code> for Indonesian browser locale.</p>
+
+<h3>4.6 <code>AssessmentInvitePage.tsx</code> &mdash; Assessor Dashboard</h3>
+<ul>
+<li><strong>Status chips</strong> via <code>inviteStatusOf(session)</code> (reads <code>session.invite_status</code> from API).</li>
+<li><strong>Actions per state:</strong></li>
+</ul>
+<table>
+<tr><th>State</th><th>Copy</th><th>Revoke</th><th>Reissue</th><th>Monitor</th><th>Results</th></tr>
+<tr><td>pending</td><td>"Awaiting candidate"</td><td>YES</td><td>no</td><td>no</td><td>no</td></tr>
+<tr><td>expired</td><td>"Invite expired"</td><td>no</td><td>YES</td><td>no</td><td>no</td></tr>
+<tr><td>revoked</td><td>"Invite revoked"</td><td>no</td><td>YES</td><td>no</td><td>no</td></tr>
+<tr><td>active</td><td>"Live"</td><td>no (422)</td><td>no</td><td>YES</td><td>no</td></tr>
+<tr><td>completed</td><td>"Completed"</td><td>no</td><td>no</td><td>no</td><td>YES</td></tr>
+</table>
+<ul>
+<li><strong>Live-only polling:</strong> <code>useEffect</code> checks <code>sessions.some(s => s.status === "active")</code> before starting 5 s interval.</li>
+<li><strong>Revoke confirmation dialog</strong> explains candidate-visible consequence.</li>
+<li><strong>Reissue banner</strong> shows new link + &ldquo;Previous links stay invalid&rdquo;.</li>
+<li><strong>Responsive rows:</strong> <code>flex-col sm:flex-row</code>, header stacks on mobile, no horizontal overflow at 390 px.</li>
+</ul>
+
+<h2>5. Test Strategy</h2>
+
+<h3>5.1 API &mdash; 43 RSpec Examples</h3>
+<table>
+<tr><th>Spec File</th><th>Examples</th><th>What It Proves</th></tr>
+<tr><td><code>session_spec.rb</code></td><td>18</td><td>Defaults, URL origin, expiry/revocation/consumption, status precedence, token rotation, consent idempotency</td></tr>
+<tr><td><code>candidate_invites_spec.rb</code></td><td>12</td><td>Every candidate code path, consent, idempotency, audio-complete behaviour</td></tr>
+<tr><td><code>invite_management_spec.rb</code></td><td>10</td><td>Revoke/reissue rules, auth, role rejection, cross-tenant 404</td></tr>
+<tr><td><code>portfolio_tenant_isolation_spec.rb</code></td><td>4</td><td>Read/write isolation for portfolios & overrides</td></tr>
+</table>
+<p><strong>Run:</strong> <code>cd api && bundle exec rspec</code> &rarr; <code>43 examples, 0 failures</code></p>
+
+<h3>5.2 Web &mdash; 24 Vitest Examples</h3>
+<table>
+<tr><th>Spec File</th><th>Examples</th><th>What It Proves</th></tr>
+<tr><td><code>candidateAccess.test.ts</code></td><td>10</td><td>Code&rarr;state mapping, status fallback, network classification, EN/ID copy</td></tr>
+<tr><td><code>CandidateAccessState.test.tsx</code></td><td>4</td><td>Expired vs retryable rendering, Indonesian copy, <strong>no false completion</strong></td></tr>
+<tr><td><code>ConsentGate.test.tsx</code></td><td>3</td><td>Affirmative opt-in, language switch, error handling</td></tr>
+<tr><td><code>InterviewPage.test.tsx</code></td><td>7</td><td>End-to-end state selection with mocked API + device check</td></tr>
+</table>
+<p><strong>Run:</strong> <code>cd web && npm test</code> &rarr; <code>24 passed</code> + <code>npm run build</code> (includes <code>tsc --noEmit</code>)</p>
+
+<h3>5.3 Seeded-Fault Proof (The &ldquo;Tests Can Fail&rdquo; Evidence)</h3>
+<table>
+<tr><th>Fault</th><th>Change</th><th>Result</th></tr>
+<tr><td><strong>Backend expiry removed</strong></td><td><code>def invite_usable?; pending? && !invite_revoked?; end</code></td><td><strong>3 failures</strong>: model spec, candidate lookup, consent refusal</td></tr>
+<tr><td><strong>Frontend expired&rarr;completed</strong></td><td><code>case "invite_expired": return "completed"</code></td><td><strong>2 failures</strong>: mapping test, rendering test</td></tr>
+</table>
+<p>Logs committed to <code>assessment/evidence/seeded-fault-backend.txt</code> and <code>seeded-fault-frontend.txt</code>.</p>
+
+<h2>6. CI/CD &mdash; <code>.github/workflows/ci.yml</code></h2>
+<pre><code>jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        ports: ["5432:5432"]
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_NAME: rakamin_test
+      SECRET_KEY_BASE: ci-only-secret...
+      REDIS_URL: redis://localhost:6379/1
+      ALLOWED_ORIGINS: "*"          # &larr; fixes CORS initializer crash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.2"
+          bundler-cache: true
+          working-directory: api
+      - run: bundle exec rails db:create db:schema:load
+      - run: bundle exec rspec --format progress
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+</code></pre>
+<p><strong>Pinned Ruby 3.3.2</strong> to match <code>.ruby-version</code> / Gemfile (CI doesn't float on minors).</p>
+
+<h2>7. Trade-off Matrix (Option A vs B)</h2>
+<table>
+<tr><th>Criterion</th><th><strong>Option A</strong> &mdash; Lifecycle columns on <code>sessions</code> (chosen)</th><th><strong>Option B</strong> &mdash; Separate <code>invitations</code> aggregate + events</th></tr>
+<tr><td>Time to safe release</td><td>High: 1 reversible migration</td><td>Low: new aggregate, backfill, dual-read/write</td></tr>
+<tr><td>Backward compat</td><td>High: additive columns</td><td>Medium: every reader must switch</td></tr>
+<tr><td>Token rotation</td><td>Simple: rotate <code>invite_token</code> + counter</td><td>Cleaner: each invitation row immutable</td></tr>
+<tr><td>Audit/compliance</td><td>Adequate: timestamps + counter</td><td>Strong: append-only events with actor/reason</td></tr>
+<tr><td>Multiple invites/candidate</td><td>Weak (1:1)</td><td>Strong (1:N)</td></tr>
+<tr><td>Migration risk</td><td>Low</td><td>Higher</td></tr>
+<tr><td>Test surface</td><td>Small, focused</td><td>Larger</td></tr>
+</table>
+<p><strong>Verdict:</strong> Ship Option A now. Adopt Option B when multiple invites, compliance-grade audit, or invite analytics become requirements.</p>
+
+<h2>8. Demo & Verification Checklist</h2>
+<pre><code># API
+cd api
+bundle install
+cp config/application.yml.sample config/application.yml
+bundle exec rails db:create db:migrate db:seed
+bundle exec rails runner db/seeds_demo.rb   # &larr; deterministic 6 candidates
+bundle exec rails s -p 3001
+
+# Web (separate terminal)
+cd web
+npm install
+cp .env.example .env   # VITE_API_BASE_URL=http://localhost:3001/api/v1
+npm run dev            # http://localhost:5173
+</code></pre>
+<p><strong>Assessor login:</strong> <code>assessor@example.test</code> / <code>demo-password-123</code> (dev seed only, overridable via <code>DEMO_ASSESSOR_PASSWORD</code>)</p>
+<p><strong>What to demo first:</strong></p>
+<ol>
+<li><code>/assessments/<id>/invite</code> &mdash; six rows, each with correct chip + actions</li>
+<li>Revoke Ahmad &rarr; confirm dialog &rarr; row shows revoked</li>
+<li>Fresh link &rarr; consent gate (EN &rarr; Bahasa toggle) &rarr; hardware check</li>
+<li>Expired / Revoked / Completed / In-progress / Not-found links &mdash; distinct copy</li>
+<li>Network error &rarr; retry button</li>
+<li>Reissue Siti &rarr; new token, old URL dead, banner says &ldquo;Previous links stay invalid&rdquo;</li>
+<li>Mobile view (390&times;844) &mdash; no horizontal overflow</li>
+</ol>
+
+<h2>9. How to Explain Any Part in 30 Seconds</h2>
+<table>
+<tr><th>Question</th><th>30-Second Answer</th></tr>
+<tr><td>Why rotate tokens on reissue?</td><td>A leaked link must stay dead. Extending the old token would keep the leak alive. Rotation gives a fresh 72 h window and increments a counter for audit.</td></tr>
+<tr><td>Why 410 not 404 for expired?</td><td>404 = &ldquo;never existed&rdquo;. 410 = &ldquo;existed, now gone&rdquo;. Frontend distinguishes: expired shows &ldquo;ask for reissue&rdquo;; not-found shows &ldquo;check the link&rdquo;.</td></tr>
+<tr><td>Why can&rsquo;t I revoke a live interview?</td><td>Revocation would hide the &ldquo;Monitor&rdquo; action while the interview is still running. The assessor must explicitly end it, not revoke the invite.</td></tr>
+<tr><td>How is consent auditable?</td><td><code>consent_given_at</code> timestamp written server-side via idempotent <code>POST /consent</code>. Not a client flag &mdash; survives refresh, network loss, or malicious user.</td></tr>
+<tr><td>How do you prevent cross-tenant portfolio access?</td><td>Every portfolio/override lookup joins through <code>sessions</code> and filters <code>sessions.tenant_id = current_tenant_id</code>. Cross-tenant returns 404 (not 403) so existence isn&rsquo;t leaked.</td></tr>
+<tr><td>Why no Redis in CI?</td><td><code>Rack::Attack</code> uses <code>ActiveSupport::Cache::MemoryStore</code> in <code>test</code> env. Keeps CI fast and dependency-free.</td></tr>
+<tr><td>What&rsquo;s the seeded-fault proof?</td><td>I deliberately broke the two highest-risk behaviours (expiry check, expired&rarr;completed mapping) and the suites caught them (3 + 2 failures). Then restored. Proves tests assert the <em>product promise</em>, not just implementation.</td></tr>
+</table>
+
+<h2>10. Known Limitations (Honest & Documented)</h2>
+<table>
+<tr><th>Limitation</th><th>Why Not Fixed</th><th>Next Step</th></tr>
+<tr><td>No resume flow for interrupted interview</td><td>Scope; honest &ldquo;in-progress&rdquo; state is safer than fake resume</td><td>Signed resume token scoped to live session</td></tr>
+<tr><td>No email delivery</td><td>Assessor copies link manually</td><td>Mailer + bounce handling in Invitation Service</td></tr>
+<tr><td>Expiry is read-time only</td><td>Correct for access control</td><td>Sweeper job to notify assessors before lapse</td></tr>
+<tr><td>Consent copy needs legal review</td><td>Mechanism + timestamps done; wording is product/legal</td><td>UU PDP legal sign-off</td></tr>
+<tr><td>Token in URL (referrer/history leak)</td><td>256-bit entropy + rotation mitigates</td><td>One-time exchange for short-lived cookie on first load</td></tr>
+<tr><td>CORS <code>ALLOWED_ORIGINS: "*"</code> in sample</td><td>Dev only</td><td>Restrict before production</td></tr>
+<tr><td>One invite per session</td><td>Simpler model</td><td>Move to <code>invitations</code> aggregate (Option B) when needed</td></tr>
+</table>
+
+<h2>11. File Map (What You Touched)</h2>
+<pre><code>
+api/
+├── db/
+│   ├── migrate/20261106000000_add_invite_lifecycle_to_sessions.rb
+│   └── seeds_demo.rb
+├── app/
+│   ├── models/session.rb                    # invite_usable?, invite_status, revoke!, reissue!, consent!, invite_url
+│   ├── models/user.rb                       # ROLES, ASSESSOR_ROLES
+│   ├── controllers/api/v1/
+│   │   ├── sessions_controller.rb           # candidate codes, consent, revoke, reissue
+│   │   ├── portfolios_controller.rb         # tenant-scoped lookup
+│   │   └── portfolio_skills_controller.rb   # tenant-scoped lookup
+│   └── controllers/concerns/response.rb     # json_error(..., code:)
+├── config/
+│   ├── application.rb                       # autoload_paths << (not +=)
+│   ├── initializers/
+│   │   ├── cors.rb                          # ENV.fetch("ALLOWED_ORIGINS") &mdash; fixed by CI env
+│   │   ├── rack_attack.rb                   # MemoryStore in test
+│   │   └── websocket.rb                     # require_relative ..._web_socket_middleware
+│   └── application.yml.sample               # WEB_BASE_URL, CANDIDATE_BASE_URL documented
+├── spec/
+│   ├── models/session_spec.rb               # 18
+│   ├── requests/candidate_invites_spec.rb   # 12
+│   ├── requests/invite_management_spec.rb   # 10
+│   └── requests/portfolio_tenant_isolation_spec.rb # 4
+└── Gemfile                                  # ruby '3.3.2' (pinned)
+
+web/
+├── src/
+│   ├── lib/candidateAccess.ts               # pure mapping + EN/ID copy
+│   ├── lib/candidateAccess.test.ts          # 10
+│   ├── components/candidate/
+│   │   ├── CandidateAccessState.tsx         # honest screens
+│   │   ├── CandidateAccessState.test.tsx    # 4
+│   │   ├── ConsentGate.tsx                  # affirmative checkbox
+│   │   ├── ConsentGate.test.tsx             # 3
+│   │   └── LanguageToggle.tsx               # persisted EN/ID
+│   ├── pages/
+│   │   ├── interview/InterviewPage.tsx      # state machine
+│   │   ├── interview/InterviewPage.test.tsx # 7
+│   │   └── assessments/AssessmentInvitePage.tsx # assessor dashboard
+│   └── test/setup.ts
+├── package.json                              # vitest, tsc, build
+└── .env.example                             # VITE_API_BASE_URL
+
+.github/workflows/ci.yml                     # API + Web jobs
+
+assessment/
+├── report.html                              # full case-study report
+├── Case-Study-Report.pdf                    # generated from report.html
+├── Case-Study-Walkthrough.mp4               # 3:48 narrated video
+├── evidence/
+│   ├── rspec-passing.txt
+│   ├── vitest-passing.txt
+│   ├── api-verification.txt                 # curl transcript (tokens redacted)
+│   ├── seeded-fault-backend.txt
+│   └── seeded-fault-frontend.txt
+└── screenshots/01-13.png                    # deterministic captures
+</code></pre>
+
+<h2>12. One-Liners for the &ldquo;Why Did You&hellip;?&rdquo; Questions</h2>
+<ul>
+<li><strong>Why <code>invite_status</code> on the model, not the controller?</strong> Single source of truth. Candidate page and assessor page both call the same method &mdash; no drift.</li>
+<li><strong>Why not Soft Delete for revocation?</strong> Revocation is a <em>state</em>, not a deletion. We need the token, expiry, and reissue counter for audit and for the &ldquo;reissue&rdquo; action.</li>
+<li><strong>Why <code>invite_reissued_count</code>?</strong> Audit trail: how many times was this link rotated? Product can later show &ldquo;Link reissued 2&times;&rdquo;.</li>
+<li><strong>Why <code>consent_given_at</code> nullable?</strong> Idempotent endpoint &mdash; second POST returns same timestamp. <code>nil</code> means &ldquo;not yet given&rdquo;.</li>
+<li><strong>Why <code>ENV.fetch</code> with fallbacks in <code>invite_url</code>?</strong> Works locally (<code>localhost:5173</code>), staging (<code>CANDIDATE_BASE_URL</code>), prod (<code>WEB_BASE_URL</code>) without code changes.</li>
+<li><strong>Why <code>404</code> for cross-tenant, not <code>403</code>?</strong> <code>403</code> confirms &ldquo;resource exists but you can&rsquo;t see it&rdquo;. <code>404</code> leaks nothing.</li>
+<li><strong>Why individual <code><<</code> for autoload_paths?</strong> Rails 7 freezes the array; <code>+=</code> mutates frozen &rarr; <code>FrozenError</code>.</li>
+<li><strong>Why rename <code>*_websocket_middleware.rb</code> &rarr; <code>*_web_socket_middleware.rb</code>?</strong> Zeitwerk inflects <code>WebSocket</code> &rarr; <code>web_socket</code>; filename must match.</li>
+<li><strong>Why <code>MemoryStore</code> for Rack::Attack in test?</strong> No Redis container in CI; in-memory is deterministic and fast.</li>
+<li><strong>Why seed 6 candidates?</strong> Covers every invite state + portfolio/fit-gap + failed interview. One command = full demo.</li>
+</ul>
+
+<h2>13. Closing Statement (Use in Interview)</h2>
+<blockquote>
+<p>&ldquo;I chose the invite boundary because it&rsquo;s where <strong>security</strong> (token leakage, IDOR), <strong>privacy</strong> (expiry, consent, UU PDP), and <strong>candidate trust</strong> (honest states) collide. The baseline collapsed every failure into &lsquo;Interview Complete&rsquo; &mdash; a lie. I made every state explicit, testable, and observable. The slice is narrow (one migration, 43 + 24 tests) but deep: I can defend every line, every trade-off, and every omission. The demo resets with one command, runs without a Gemini key, and the CI proves it stays green.&rdquo;</p>
+</blockquote>
+
+<hr/>
+<p class="meta">Generated from PR #240 &mdash; <code>feat/candidate-invite-trust</code> &mdash; ready for the technical interview.</p>
+</body>
+</html>
