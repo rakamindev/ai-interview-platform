@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-# Smoke test untuk membuktikan test harness bekerja end-to-end:
-# routing, middleware tenant, autentikasi JWT, dan database tes.
+# Smoke test proving the harness works end to end:
+# routing, tenant middleware, JWT auth and the test database.
 RSpec.describe 'API smoke', type: :request do
   describe 'GET /api/v1/health' do
     it 'returns ok without authentication' do

@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import OverrideForm from "./OverrideForm";
 import type { PortfolioSkill } from "@/types";
 
-// Fungsi biasa (bukan vi.fn): spy Vitest 4 ikut mengamati promise yang ditolak dan
-// melaporkannya sebagai unhandled rejection walau komponen sudah menangkapnya.
+// A plain function instead of vi.fn: Vitest 4 spies also observe the rejected
+// promise and report it as unhandled even though the component catches it.
 const api = vi.hoisted(() => ({
   calls: [] as unknown[][],
   respond: (() => Promise.resolve({})) as () => Promise<unknown>,

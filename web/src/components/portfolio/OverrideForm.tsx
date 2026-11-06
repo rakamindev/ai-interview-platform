@@ -12,15 +12,15 @@ import type { AssessorOverride, OverrideEvent, PortfolioSkill } from "@/types";
 
 interface OverrideFormProps {
   skill: PortfolioSkill;
-  /** Level yang berlaku saat ini (hasil koreksi terakhir, atau level AI). */
+  /** Level currently in effect (latest correction, or the AI level). */
   currentLevel: number;
   onSaved: (override: AssessorOverride, event: OverrideEvent) => void;
   onCancel: () => void;
 }
 
 /**
- * Form koreksi level oleh asesor (F-04). Alasan wajib karena koreksi mengubah
- * hasil penilaian kandidat dan harus bisa dipertanggungjawabkan.
+ * Assessor form to correct an AI level. A reason is required because the
+ * correction changes the candidate's result and must be accountable.
  */
 export default function OverrideForm({ skill, currentLevel, onSaved, onCancel }: OverrideFormProps) {
   const uid = useId();

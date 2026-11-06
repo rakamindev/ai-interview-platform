@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-# F-18: parameter berisi data pribadi kandidat atau penilaian asesor tidak boleh
-# tertulis apa adanya di log aplikasi (UU PDP; brief: "no sensitive personal data in logs").
+# F-18: candidate personal data and assessor notes must not be written
+# to the application log as is.
 RSpec.describe 'Parameter log filtering', type: :request do
   let(:log_output) { StringIO.new }
 
@@ -19,7 +19,7 @@ RSpec.describe 'Parameter log filtering', type: :request do
     ActionController::Base.logger = original_controller_logger
   end
 
-  it 'menyaring nama kandidat saat membuat sesi' do
+  it 'filters the candidate name when creating a session' do
     assessment = with_tenant { Assessment.create!(name: 'Assessment Log', time_limit_min: 10, created_by: 1) }
 
     post "/api/v1/assessments/#{assessment.id}/sessions",
@@ -30,7 +30,7 @@ RSpec.describe 'Parameter log filtering', type: :request do
     expect(log_output.string).to include('[FILTERED]')
   end
 
-  it 'menyaring alasan override asesor' do
+  it 'filters the assessor override reason' do
     skill = create_portfolio_for(test_organization)[:skill]
 
     post "/api/v1/portfolio_skills/#{skill.id}/override",
@@ -41,7 +41,7 @@ RSpec.describe 'Parameter log filtering', type: :request do
     expect(log_output.string).to include('[FILTERED]')
   end
 
-  it 'menyaring password pada login' do
+  it 'filters the password on login' do
     post '/api/v1/auth/login', params: { email: 'fiktif@example.test', password: 'KataSandiRahasia123' }, as: :json
 
     expect(log_output.string).not_to include('KataSandiRahasia123')

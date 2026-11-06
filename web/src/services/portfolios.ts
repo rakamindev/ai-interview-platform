@@ -2,7 +2,7 @@ import api from "./api";
 import type { AssessorOverride, FitGapReport, OverrideEvent } from "@/types";
 
 export const portfoliosApi = {
-  // Menyimpan koreksi asesor; API mengembalikan state terkini + entri riwayat baru.
+  // Saves an assessor correction; returns the current override and the new history entry.
   saveOverride: (portfolioSkillId: number, data: { override_level: number; assessor_notes: string }) =>
     api.post<{ override: AssessorOverride; event: OverrideEvent }>(`/portfolio_skills/${portfolioSkillId}/override`, {
       override: data,

@@ -15,8 +15,8 @@ module FitGap
 
     # Returns the FitGapReport record.
     def call
-      # Snapshot override terbaru SEBELUM membaca level. Bila ada override baru selama
-      # laporan dibuat, laporan tetap ditandai stale agar diperbarui lagi (F-09).
+      # Take the override snapshot before reading levels. If another override lands
+      # while the report is being built, the report stays stale and is rebuilt.
       snapshot          = @portfolio.latest_override_at
       skill_comparisons = build_skill_comparisons
       narratives        = generate_narratives(skill_comparisons)
@@ -66,11 +66,11 @@ module FitGap
           skill_label:     label,
           skill_id:        vacancy_skill.skill_id,
           candidate_level: candidate_level,
-          # required_level adalah nama yang dibaca frontend (F-06); expected_level
-          # dipertahankan untuk kompatibilitas dengan pembaca lama (export, PDF).
+          # required_level is what the frontend reads; expected_level stays for
+          # older readers (export, PDF).
           required_level:  expected_level,
           expected_level:  expected_level,
-          # Asal level (F-07): level AI asli, apakah dikoreksi asesor, dan alasannya.
+          # Where the level comes from: original AI level, assessor correction and reason.
           ai_level:        portfolio_skill&.dig(:ai_level),
           is_override:     portfolio_skill&.dig(:overridden) || false,
           override_reason: portfolio_skill&.dig(:override_reason),

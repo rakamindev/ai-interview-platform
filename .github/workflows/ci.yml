@@ -1,7 +1,7 @@
 name: CI
 
-# Push ke branch mana pun agar CI juga berjalan di fork kontributor; PR dari fork
-# ke repo upstream biasanya menunggu persetujuan maintainer sebelum Actions jalan.
+# Run on every push so forks get CI too; PRs from forks to upstream usually
+# wait for maintainer approval before Actions run.
 on:
   push:
   pull_request:
@@ -42,9 +42,9 @@ jobs:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       REDIS_URL: redis://localhost:6379/1
-      # Wajib saat boot: config/initializers/cors.rb memanggil ENV.fetch('ALLOWED_ORIGINS').
+      # Required at boot: config/initializers/cors.rb calls ENV.fetch('ALLOWED_ORIGINS').
       ALLOWED_ORIGINS: http://localhost:5173
-      # Nilai dummy khusus CI: tes tidak memanggil Gemini (API di-stub/di-fake).
+      # Dummy values for CI: specs never call Gemini (it is stubbed).
       GEMINI_API_KEY: ci-dummy-key
       GEMINI_LIVE_MODEL: ci-dummy-live
       GEMINI_FLASH_MODEL: ci-dummy-flash
@@ -61,7 +61,7 @@ jobs:
       - name: Generate throwaway SECRET_KEY_BASE
         run: echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> "$GITHUB_ENV"
 
-      # bin/rails tercatat di git tanpa bit executable (100644), jadi dipanggil via bundle exec.
+      # bin/rails is committed without the executable bit (100644), so use bundle exec.
       - name: Prepare test database
         run: bundle exec rails db:create db:schema:load
 

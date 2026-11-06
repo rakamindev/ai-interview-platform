@@ -1,4 +1,4 @@
-# Coverage harus dimulai sebelum kode aplikasi dimuat agar semua baris terhitung.
+# Start coverage before the app is loaded so every line is counted.
 require 'simplecov'
 SimpleCov.start 'rails' do
   enable_coverage :branch

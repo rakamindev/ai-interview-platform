@@ -8,13 +8,13 @@ import type { OverrideEvent } from "@/types";
 const VISIBLE_BY_DEFAULT = 3;
 
 interface OverrideHistoryProps {
-  /** Terbaru di atas, sesuai urutan dari API. */
+  /** Newest first, as returned by the API. */
   events: OverrideEvent[];
 }
 
 /**
- * Jejak setiap koreksi manusia terhadap level AI (F-05): siapa, kapan, dari → ke, alasan.
- * Asesor diidentifikasi dengan ID karena JWT tidak memuat nama dan tidak ada lookup user.
+ * Every human correction of an AI level: who, when, from -> to, and why.
+ * Assessors are shown by id because the JWT has no name and there is no user lookup.
  */
 export default function OverrideHistory({ events }: OverrideHistoryProps) {
   const titleId = useId();

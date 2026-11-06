@@ -28,7 +28,7 @@ export default function AssessorLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
-        {/* Di layar kecil hanya ikon yang tampil agar header tidak meluber (≤ 375 px). */}
+        {/* Icon-only navigation on small screens so the header fits 375px */}
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 sm:gap-6 min-w-0">
             <Link to="/assessments" className="flex items-center gap-2 shrink-0" aria-label="Rakamin AI Interview">

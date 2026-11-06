@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Membuat rangkaian data portofolio lengkap (assessment → session → portfolio → skill)
-# untuk satu organisasi. Semua data fiktif.
+# Builds a full portfolio chain (assessment -> session -> portfolio -> skill)
+# for one organisation. All data is fictional.
 module PortfolioHelpers
   def other_organization
     @other_organization ||= Organization.find_by(scheme: 'other-corp') ||

@@ -1,4 +1,4 @@
-// Batas alasan koreksi; harus sama dengan AssessorOverrideEvent::REASON_LENGTH di API.
+// Reason limits; must match AssessorOverrideEvent::REASON_LENGTH in the API.
 export const OVERRIDE_REASON_MIN = 10;
 export const OVERRIDE_REASON_MAX = 1000;
 
@@ -13,7 +13,7 @@ const WIB = new Intl.DateTimeFormat("id-ID", {
   timeZone: "Asia/Jakarta",
 });
 
-/** Waktu ditampilkan dalam WIB agar konsisten untuk semua asesor. */
+/** Times are shown in WIB so every assessor sees the same clock. */
 export function formatWib(iso: string): string {
   return `${WIB.format(new Date(iso))} WIB`;
 }
@@ -24,9 +24,9 @@ interface ApiErrorShape {
 }
 
 /**
- * Pesan error yang bisa dipahami asesor:
- * - validasi dari server (422) ditampilkan apa adanya;
- * - timeout / jaringan / error server diganti kalimat yang tidak teknis.
+ * Error messages an assessor can understand:
+ * - server validation errors (422) are shown as is;
+ * - timeouts, network and server errors become plain sentences.
  */
 export function apiErrorMessage(error: unknown): string {
   const err = (error ?? {}) as ApiErrorShape;

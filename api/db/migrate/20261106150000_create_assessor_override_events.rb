@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-# F-05: riwayat override append-only. Tabel assessor_overrides tetap menjadi
-# "state terkini"; tabel ini mencatat setiap perubahan (siapa, kapan, dari → ke, alasan).
+# Append-only override history. assessor_overrides stays the current state;
+# this table records every change (who, when, from -> to, why).
 #
-# Aman untuk data lama: setiap override yang sudah ada di-backfill menjadi event
-# pertama dengan legacy = true dan reason NULL bila alasan lama kosong.
-# Reversible: down hanya menghapus tabel ini; assessor_overrides tidak disentuh.
+# Existing overrides are backfilled as the first event with legacy = true
+# (reason NULL when the old note was empty).
+# Reversible: down only drops this table; assessor_overrides is untouched.
 class CreateAssessorOverrideEvents < ActiveRecord::Migration[7.0]
   def up
     create_table :assessor_override_events do |t|
-      # Cascade di level database: bila portfolio_skill dihapus (regenerasi portofolio
-      # berstatus failed), riwayatnya ikut terhapus tanpa melewati model.
+      # Database-level cascade: when a portfolio_skill is deleted (regenerating a
+      # failed portfolio), its history goes with it.
       t.references :portfolio_skill, null: false, index: false,
                                      foreign_key: { on_delete: :cascade }
       t.integer  :previous_level, null: false

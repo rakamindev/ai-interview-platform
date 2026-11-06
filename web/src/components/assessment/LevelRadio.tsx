@@ -8,7 +8,7 @@ interface LevelRadioProps {
   onChange: (level: number) => void;
   disabled?: boolean;
   className?: string;
-  /** Prefix id unik bila beberapa LevelRadio tampil di halaman yang sama. */
+  /** Unique id prefix when several LevelRadio groups are on one page. */
   idPrefix?: string;
 }
 

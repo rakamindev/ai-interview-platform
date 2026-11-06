@@ -3,7 +3,7 @@
 class FitGapReport < ApplicationRecord
   FIT_RESULTS = %w[match gap exceed not_assessed].freeze
   REGENERATION_COOLDOWN = 2.minutes
-  # Generik: tidak boleh memuat pesan exception (bisa berisi data kandidat).
+  # Generic on purpose: exception messages may contain candidate data.
   FAILURE_MESSAGE = 'The report could not be updated. Showing the previous version.'
 
   belongs_to :portfolio
@@ -11,11 +11,11 @@ class FitGapReport < ApplicationRecord
 
   validates :skill_comparisons, presence: true
 
-  # Menandai laporan perlu diperbarui lalu mengantrekan regenerasi (F-09).
-  # - force: true dipakai setelah override: selalu antrekan, karena worker idempoten.
-  # - tanpa force (saat laporan dibaca): dibatasi cooldown agar tidak membanjiri Gemini.
-  # update_all bersyarat bersifat atomik, sehingga dua request bersamaan tidak
-  # sama-sama mengantrekan job di dalam jendela cooldown.
+  # Marks the report stale and queues a regeneration.
+  # - force: true is used after an override (always queue; the worker is idempotent).
+  # - without force (when a report is read) a cooldown avoids flooding Gemini.
+  # The conditional update_all is atomic, so two concurrent requests cannot
+  # both queue a job within the cooldown window.
   def request_regeneration!(force: false)
     scope = self.class.where(id:)
     unless force
@@ -28,7 +28,7 @@ class FitGapReport < ApplicationRecord
     true
   end
 
-  # Laporan sudah mencerminkan override terbaru → job regenerasi boleh dilewati.
+  # The report already reflects the latest override, so a regeneration job can be skipped.
   def fresh_for?(latest_override_at)
     !stale && self.class.same_instant?(based_on_override_at, latest_override_at)
   end

@@ -10,8 +10,8 @@ class FitGapGeneratorWorker
     vacancy   = Vacancy.unscoped.find(vacancy_id)
     report    = FitGapReport.find_by(portfolio_id:, vacancy_id:)
 
-    # Idempoten (F-09): job ganda dari override beruntun atau retry dilewati bila
-    # laporan sudah mencerminkan override terbaru, tanpa memanggil Gemini lagi.
+    # Idempotent: duplicate jobs (repeated overrides, retries) are skipped
+    # when the report already reflects the latest override, without calling Gemini.
     if report&.fresh_for?(portfolio.latest_override_at)
       Rails.logger.info("[N13] Fit/gap already up to date, skipping: portfolio=#{portfolio_id} vacancy=#{vacancy_id}")
       return
@@ -21,10 +21,10 @@ class FitGapGeneratorWorker
   rescue ActiveRecord::RecordNotFound => e
     Rails.logger.warn("[N13] Record not found: #{e.message}")
   rescue StandardError => e
-    # Laporan lama tetap tersedia (tidak dihapus); simpan pesan generik untuk UI.
+    # Keep the previous report and store a generic message for the UI.
     FitGapReport.where(portfolio_id:, vacancy_id:)
                 .update_all(generation_error: FitGapReport::FAILURE_MESSAGE, regeneration_requested_at: nil)
-    # Hanya kelas error yang dicatat: pesan exception bisa memuat data kandidat.
+    # Log only the error class: exception messages may contain candidate data.
     Rails.logger.error("[N13] FitGapGeneratorWorker failed for portfolio=#{portfolio_id} vacancy=#{vacancy_id}: #{e.class}")
     raise
   end

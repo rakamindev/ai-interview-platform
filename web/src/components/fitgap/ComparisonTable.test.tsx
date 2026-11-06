@@ -3,8 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 import ComparisonTable from "./ComparisonTable";
 import type { SkillComparison } from "@/types";
 
-// Bentuk baris mengikuti respons GET /api/v1/portfolios/:id/fitgap/:vacancy_id
-// setelah perbaikan F-06/F-07 (data fiktif).
+// Rows follow the GET /api/v1/portfolios/:id/fitgap/:vacancy_id response
+// after the F-06/F-07 fix (fictional data).
 const rows: SkillComparison[] = [
   {
     skill_label: "Database Design & SQL",
@@ -29,7 +29,7 @@ const rows: SkillComparison[] = [
 ];
 
 function bodyRows() {
-  // baris pertama adalah header
+  // the first row is the header
   return screen.getAllByRole("row").slice(1);
 }
 

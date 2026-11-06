@@ -91,7 +91,7 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Laporan lama TIDAK dihapus (F-09): tetap bisa dibaca sampai versi baru siap.
+        # Keep the old report readable until the new one is ready.
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
           existing.request_regeneration!(force: true)
@@ -140,8 +140,8 @@ module Api
           return json_error("Fit/gap report not found", :not_found)
         end
 
-        # Pulih sendiri: laporan stale yang job-nya hilang (mis. Redis mati saat enqueue)
-        # diantrekan ulang saat dibaca, dibatasi cooldown.
+        # Self-healing: a stale report whose job was lost (e.g. Redis down on enqueue)
+        # is queued again when read, limited by a cooldown.
         report.request_regeneration! if report.stale?
 
         json_response(report: fit_gap_json(report))
@@ -169,8 +169,8 @@ module Api
         json_error("Portfolio not found", :not_found)
       end
 
-      # Satu-satunya pintu untuk mencari portofolio berdasarkan ID (F-02).
-      # Portofolio milik organisasi lain diperlakukan sama dengan ID yang tidak ada (404).
+      # The only way to look up a portfolio by id. Portfolios of other
+      # organisations behave like missing ids (404).
       def accessible_portfolios
         Portfolio.for_tenant(current_tenant_id)
       end
@@ -199,7 +199,7 @@ module Api
           ai_confidence:     skill.ai_confidence,
           evidence:          skill.evidence_quotes,
           competency_summary: skill.competency_summary,
-          # Terbaru di atas (urutan dari scope association) — F-05.
+          # Newest first (ordered by the association scope).
           override_history:  skill.assessor_override_events.map { |e| OverrideEventSerializer.call(e) }
         }
       end
@@ -230,8 +230,8 @@ module Api
         }
       end
 
-      # Laporan yang dibuat sebelum F-06/F-07 diperbaiki tidak punya field baru.
-      # Isi nilai aman agar frontend tetap bisa merender sampai laporan diperbarui.
+      # Reports generated before this change lack the new fields;
+      # fill safe defaults so the frontend can render them until they are refreshed.
       def normalize_comparison(comparison)
         row = comparison.to_h.stringify_keys
         row['required_level']  = row['expected_level'] unless row.key?('required_level')

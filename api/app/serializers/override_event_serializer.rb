@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Bentuk JSON satu entri riwayat override, dipakai oleh endpoint override dan portofolio.
+# JSON for one override history entry (used by the override and portfolio endpoints).
 module OverrideEventSerializer
   module_function
 

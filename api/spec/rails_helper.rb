@@ -64,8 +64,8 @@ RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include AuthHelpers
 
-  # Current.* disimpan di RequestStore (global per thread). Di luar request HTTP
-  # nilainya bisa bocor antar-tes, jadi selalu dibersihkan.
+  # Current.* lives in RequestStore (a per-thread global). Outside HTTP requests
+  # it can leak between examples, so clear it every time.
   config.before { RequestStore.clear! }
   config.after  { RequestStore.clear! }
 end

@@ -23,7 +23,7 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
-  // State parsial: portofolio tampil walau daftar lowongan gagal dimuat.
+  // Partial state: the portfolio still renders if vacancies fail to load.
   const [vacanciesError, setVacanciesError] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
@@ -54,7 +54,7 @@ export default function PortfolioPage() {
   }, []);
 
   useEffect(() => {
-    // allSettled: kegagalan satu bagian tidak menyembunyikan bagian lain.
+    // allSettled: one failing request does not hide the rest of the page.
     Promise.allSettled([
       fetchPortfolio(),
       loadVacancies(),
@@ -65,7 +65,7 @@ export default function PortfolioPage() {
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
-  // Perbarui state terkini dan tambahkan entri riwayat di atas tanpa memuat ulang halaman.
+  // Update the current override and prepend the history entry without a reload.
   const handleOverrideSaved = (skillId: number, override: AssessorOverride, event: OverrideEvent) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
     setPortfolio((prev) =>

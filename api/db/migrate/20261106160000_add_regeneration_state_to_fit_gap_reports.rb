@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-# F-09: fit-gap report tidak lagi dihapus saat override. Kolom ini menyimpan status
-# regenerasi agar laporan lama tetap bisa dibaca selama versi baru dibuat.
+# Fit-gap reports are no longer deleted on override. These columns keep the
+# regeneration state so the old report stays readable while a new one is built.
 #
-# - stale: laporan perlu diperbarui (override baru, atau laporan lama tanpa field baru)
-# - generation_error: pesan generik bila regenerasi terakhir gagal
-# - based_on_override_at: waktu override terbaru yang sudah tercermin di laporan
-#   (dipakai worker untuk melewati job ganda)
-# - regeneration_requested_at: membatasi frekuensi antrean saat laporan dibaca
+# - stale: the report needs a refresh (new override, or a report without the new fields)
+# - generation_error: generic message when the last regeneration failed
+# - based_on_override_at: latest override already reflected in the report
+#   (lets the worker skip duplicate jobs)
+# - regeneration_requested_at: rate-limits re-queuing when a report is read
 #
-# Data lama: semua laporan yang sudah ada belum memuat required_level/is_override,
-# jadi ditandai stale agar diperbarui otomatis saat pertama kali dibaca.
+# Existing reports lack required_level/is_override, so they are marked stale
+# and refreshed the first time they are read.
 class AddRegenerationStateToFitGapReports < ActiveRecord::Migration[7.0]
   def up
     change_table :fit_gap_reports, bulk: true do |t|

@@ -2,9 +2,8 @@
 
 require 'rails_helper'
 
-# Production dan CI memakai eager_load = true. Tes ini memuat seluruh kode aplikasi
-# seperti saat boot production, sehingga ketidakcocokan nama file/konstanta
-# (Zeitwerk) ketahuan di tes lokal, bukan baru di server.
+# Production and CI eager load the app. Loading everything here catches
+# file/constant name mismatches (Zeitwerk) locally instead of on a server.
 RSpec.describe 'Eager loading' do
   it 'loads every application file without Zeitwerk naming errors' do
     expect { Zeitwerk::Loader.eager_load_all }.not_to raise_error

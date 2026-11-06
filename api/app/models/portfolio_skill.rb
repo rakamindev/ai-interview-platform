@@ -5,12 +5,11 @@ class PortfolioSkill < ApplicationRecord
 
   belongs_to :portfolio
   has_one :assessor_override, dependent: :destroy
-  # Riwayat dihapus oleh foreign key ON DELETE CASCADE, bukan oleh Rails,
-  # karena event bersifat readonly di level model.
+  # History rows are removed by the ON DELETE CASCADE foreign key, not by Rails,
+  # because events are read-only at model level.
   has_many :assessor_override_events, -> { newest_first }, inverse_of: :portfolio_skill
 
-  # Sama seperti Portfolio.for_tenant: kepemilikan skill ditentukan oleh
-  # session di atas portfolio-nya (F-02).
+  # Same as Portfolio.for_tenant: ownership comes from the session above the portfolio.
   scope :for_tenant, ->(tenant_id) { joins(portfolio: :session).where(sessions: { tenant_id: tenant_id }) }
 
   validates :skill_label, presence: true

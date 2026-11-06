@@ -1,8 +1,8 @@
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config";
 
-// Mewarisi vite.config.ts (alias "@/", plugin React) supaya tes memakai
-// resolusi modul yang sama dengan aplikasi.
+// Reuses vite.config.ts ("@/" alias, React plugin) so tests resolve
+// modules the same way as the app.
 export default mergeConfig(
   viteConfig,
   defineConfig({

@@ -8,8 +8,8 @@ module Api
       before_action :set_portfolio_skill
 
       # POST /api/v1/portfolio-skills/:id/override
-      # Validasi, penyimpanan state, dan pencatatan riwayat ada di Overrides::Apply
-      # agar controller tetap tipis dan semuanya terjadi dalam satu transaksi.
+      # Validation, persistence and history live in Overrides::Apply
+      # so they happen in one transaction.
       def override
         result = Overrides::Apply.new(
           portfolio_skill: @portfolio_skill,
@@ -29,8 +29,8 @@ module Api
 
       private
 
-      # F-09: laporan tidak dihapus; ditandai stale dan diperbarui di latar belakang.
-      # Worker idempoten, jadi override beruntun tidak menghasilkan kerja ganda.
+      # Reports are marked stale and refreshed in the background instead of deleted.
+      # The worker is idempotent, so repeated overrides do not duplicate work.
       def regenerate_stale_fitgap_reports
         FitGapReport.where(portfolio_id: @portfolio_skill.portfolio_id).find_each do |report|
           report.request_regeneration!(force: true)
@@ -38,7 +38,7 @@ module Api
       end
 
       def set_portfolio_skill
-        # Hanya skill milik organisasi yang aktif; selain itu 404 (F-02).
+        # Only skills of the current organisation; anything else is a 404.
         @portfolio_skill = PortfolioSkill.for_tenant(current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)

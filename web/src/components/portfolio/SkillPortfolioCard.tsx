@@ -24,7 +24,7 @@ export default function SkillPortfolioCard({ skill, override, onOverrideSaved }:
   return (
     <Card>
       <CardContent className="p-4 space-y-4">
-        {/* Header: level efektif + asal level + tombol koreksi */}
+        {/* Header: effective level, where it comes from, correction button */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3 min-w-0">
             <LevelBadge level={effectiveLevel} />
@@ -99,7 +99,7 @@ export default function SkillPortfolioCard({ skill, override, onOverrideSaved }:
           </div>
         )}
 
-        {/* Riwayat koreksi (F-05) */}
+        {/* Correction history */}
         <div className="border-t pt-3">
           <OverrideHistory events={skill.override_history ?? []} />
         </div>

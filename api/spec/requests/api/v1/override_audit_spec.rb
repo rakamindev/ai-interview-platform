@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-# F-04 & F-05: override nilai kandidat wajib beralasan, dan setiap perubahan
-# tercatat permanen di riwayat (append-only), atomik bersama state override.
+# F-04 & F-05: overrides need a reason, and every change is kept in an
+# append-only history written atomically with the current override.
 RSpec.describe 'Assessor override audit', type: :request do
   let(:data)    { create_portfolio_for(test_organization, ai_level: 3) }
   let(:skill)   { data[:skill] }
@@ -19,14 +19,14 @@ RSpec.describe 'Assessor override audit', type: :request do
     AssessorOverrideEvent.where(portfolio_skill_id: skill.id)
   end
 
-  describe 'validasi alasan' do
+  describe 'reason validation' do
     [
-      ['kosong', ''],
-      ['hanya spasi dan baris baru', "   \n\t  "],
-      ['9 karakter', 'a' * 9],
-      ['1001 karakter', 'a' * 1001]
+      ['empty', ''],
+      ['whitespace-only', "   \n\t  "],
+      ['9-character', 'a' * 9],
+      ['1001-character', 'a' * 1001]
     ].each do |label, reason|
-      it "menolak alasan #{label} tanpa mengubah state maupun riwayat" do
+      it "rejects a #{label} reason without changing state or history" do
         override!(level: 2, reason: reason)
 
         expect(response).to have_http_status(:unprocessable_entity)
@@ -36,12 +36,12 @@ RSpec.describe 'Assessor override audit', type: :request do
       end
     end
 
-    it 'menerima alasan tepat 10 karakter (batas bawah inklusif)' do
+    it 'accepts a reason of exactly 10 characters (inclusive lower bound)' do
       override!(level: 2, reason: 'a' * 10)
       expect(response).to have_http_status(:created)
     end
 
-    it 'menerima alasan tepat 1000 karakter (batas atas inklusif) dan menyimpannya setelah di-trim' do
+    it 'accepts a reason of exactly 1000 characters (inclusive upper bound) and stores it trimmed' do
       override!(level: 2, reason: "  #{'a' * 1000}  ")
 
       expect(response).to have_http_status(:created)
@@ -49,8 +49,8 @@ RSpec.describe 'Assessor override audit', type: :request do
     end
   end
 
-  describe 'validasi level' do
-    it 'menolak override ke level yang sama dengan level efektif saat ini' do
+  describe 'level validation' do
+    it 'rejects an override to the current effective level' do
       override!(level: 3, reason: valid_reason)
 
       expect(response).to have_http_status(:unprocessable_entity)
@@ -58,13 +58,13 @@ RSpec.describe 'Assessor override audit', type: :request do
       expect(events).to be_empty
     end
 
-    it 'menolak level di luar 1..5' do
+    it 'rejects a level outside 1..5' do
       override!(level: 9, reason: valid_reason)
       expect(response).to have_http_status(:unprocessable_entity)
       expect(events).to be_empty
     end
 
-    it 'menolak override saat portofolio belum selesai dibuat' do
+    it 'rejects an override while the portfolio is not complete' do
       pending_skill = create_portfolio_for(test_organization, status: 'generating')[:skill]
 
       post "/api/v1/portfolio_skills/#{pending_skill.id}/override",
@@ -74,15 +74,15 @@ RSpec.describe 'Assessor override audit', type: :request do
       expect(AssessorOverrideEvent.where(portfolio_skill_id: pending_skill.id)).to be_empty
     end
 
-    it 'tetap menolak token kandidat (role student)' do
+    it 'still rejects a candidate token (role student)' do
       override!(level: 2, reason: valid_reason, as_headers: auth_headers(role: 'student', user_id: 2))
       expect(response).to have_http_status(:forbidden)
       expect(events).to be_empty
     end
   end
 
-  describe 'riwayat append-only' do
-    it 'override pertama mencatat satu event lengkap' do
+  describe 'append-only history' do
+    it 'the first override records one complete event' do
       override!(level: 2, reason: valid_reason)
 
       expect(response).to have_http_status(:created)
@@ -92,7 +92,7 @@ RSpec.describe 'Assessor override audit', type: :request do
                                        actor_id: 7, legacy: false)
     end
 
-    it 'override kedua tidak menghapus alasan pertama' do
+    it 'a second override keeps the first reason' do
       override!(level: 2, reason: valid_reason)
       override!(level: 1, reason: 'Setelah membaca ulang transkrip, contoh query tidak ada.')
 
@@ -105,7 +105,7 @@ RSpec.describe 'Assessor override audit', type: :request do
       expect(skill.reload.assessor_override.override_level).to eq(1)
     end
 
-    it 'mengizinkan kembali ke level AI dan mencatatnya sebagai event' do
+    it 'allows going back to the AI level and records it as an event' do
       override!(level: 2, reason: valid_reason)
       override!(level: 3, reason: 'Setuju dengan penilaian AI setelah diskusi panel.')
 
@@ -113,13 +113,13 @@ RSpec.describe 'Assessor override audit', type: :request do
       expect(events.order(:id).last).to have_attributes(previous_level: 2, new_level: 3)
     end
 
-    it 'event yang sudah tersimpan tidak bisa diubah' do
+    it 'a saved event cannot be changed' do
       override!(level: 2, reason: valid_reason)
 
       expect { events.first.update!(reason: 'diubah diam-diam') }.to raise_error(ActiveRecord::ReadOnlyRecord)
     end
 
-    it 'portofolio menyertakan riwayat per skill, terbaru di atas' do
+    it 'the portfolio includes history per skill, newest first' do
       override!(level: 2, reason: valid_reason)
       override!(level: 1, reason: 'Setelah membaca ulang transkrip, contoh query tidak ada.')
 
@@ -131,8 +131,8 @@ RSpec.describe 'Assessor override audit', type: :request do
     end
   end
 
-  describe 'atomik' do
-    it 'tidak mengubah state override bila penyimpanan riwayat gagal' do
+  describe 'atomicity' do
+    it 'does not change the override when saving history fails' do
       override!(level: 2, reason: valid_reason)
       allow_any_instance_of(AssessorOverrideEvent).to receive(:save!).and_raise(ActiveRecord::RecordNotSaved, 'simulasi gagal')
 

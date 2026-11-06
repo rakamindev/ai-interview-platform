@@ -8,7 +8,7 @@ interface ComparisonTableProps {
   comparisons: SkillComparison[];
 }
 
-// Laporan lama memakai expected_level; laporan baru mengirim required_level (F-06).
+// Old reports use expected_level; new ones send required_level.
 const requiredLevel = (c: SkillComparison) => c.required_level ?? c.expected_level;
 
 function ResultBadge({ comparison }: { comparison: SkillComparison }) {
@@ -91,7 +91,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         </table>
       </div>
 
-      {/* Ringkasan */}
+      {/* Summary */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {matchCount > 0 && <span>✅ Match: {matchCount} skill{matchCount !== 1 ? "s" : ""}</span>}
         {gapCount > 0 && <span>⚠ Gap: {gapCount} skill{gapCount !== 1 ? "s" : ""}</span>}
@@ -103,7 +103,7 @@ export default function ComparisonTable({ comparisons }: ComparisonTableProps) {
         )}
       </div>
 
-      {/* F-07: koreksi manusia dan alasannya terlihat oleh hiring manager */}
+      {/* Human corrections and their reasons, visible to the hiring manager */}
       {corrections.length > 0 && (
         <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2">
           <p id={correctionsId} className="text-xs font-semibold text-blue-900">

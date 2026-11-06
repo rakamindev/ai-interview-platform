@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Satu baris riwayat perubahan level oleh asesor (F-05). Append-only.
+# One entry in the history of level changes made by assessors. Append-only.
 class AssessorOverrideEvent < ApplicationRecord
   REASON_LENGTH = 10..1000
 
@@ -8,13 +8,13 @@ class AssessorOverrideEvent < ApplicationRecord
 
   validates :previous_level, :new_level, :ai_level, numericality: { only_integer: true, in: 1..5 }
   validates :actor_id, presence: true
-  # Event hasil backfill (legacy) boleh tanpa alasan karena berasal dari data lama.
+  # Backfilled (legacy) events may have no reason: they come from old data.
   validates :reason, length: { in: REASON_LENGTH }, unless: :legacy?
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
 
-  # Entri yang sudah tersimpan tidak boleh diubah atau dihapus lewat aplikasi.
-  # Penghapusan hanya terjadi lewat cascade database bersama skill-nya.
+  # Saved events cannot be changed or deleted through the app.
+  # They are only removed by the database cascade together with their skill.
   def readonly?
     persisted?
   end

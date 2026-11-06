@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-# F-06, F-07, F-09: fit-gap menampilkan level yang dibutuhkan dan asal setiap level,
-# tidak hilang saat override, dan regenerasinya aman terhadap job ganda serta error.
+# F-06, F-07, F-09: fit-gap shows the required level and where each level comes from,
+# survives overrides, and handles duplicate jobs and errors.
 RSpec.describe 'Fit-gap integrity', type: :request do
   let(:data)      { create_portfolio_for(test_organization, ai_level: 3) }
   let(:portfolio) { data[:portfolio] }
@@ -34,8 +34,8 @@ RSpec.describe 'Fit-gap integrity', type: :request do
     json['report']
   end
 
-  describe 'kontrak baris perbandingan (F-06, F-07)' do
-    it 'baris tanpa override membawa required_level dan is_override false' do
+  describe 'comparison row contract (F-06, F-07)' do
+    it 'a row without an override has required_level and is_override false' do
       generate_report!
 
       row = show_report['skill_comparisons'].first
@@ -43,7 +43,7 @@ RSpec.describe 'Fit-gap integrity', type: :request do
                              'is_override' => false, 'override_reason' => nil)
     end
 
-    it 'baris dengan override membawa level AI asal, level akhir, dan alasannya' do
+    it 'a row with an override has the original AI level, the final level and the reason' do
       override!(level: 2)
       generate_report!
 
@@ -52,7 +52,7 @@ RSpec.describe 'Fit-gap integrity', type: :request do
                              'is_override' => true, 'override_reason' => reason, 'result' => 'gap')
     end
 
-    it 'laporan lama tanpa field baru tetap terbaca (required_level dari expected_level) dan diperbarui otomatis' do
+    it 'an old report without the new fields is still readable (required_level from expected_level) and refreshed automatically' do
       legacy = FitGapReport.create!(
         portfolio:, vacancy:, generated_at: 1.day.ago, stale: true,
         skill_comparisons: [{ 'skill_label' => 'Database Design & SQL', 'expected_level' => 3,
@@ -68,10 +68,10 @@ RSpec.describe 'Fit-gap integrity', type: :request do
     end
   end
 
-  describe 'override tidak menghapus laporan (F-09)' do
+  describe 'an override does not delete the report (F-09)' do
     before { generate_report! }
 
-    it 'laporan tetap ada, ditandai stale, dan satu job regenerasi diantrekan' do
+    it 'keeps the report, marks it stale and queues one regeneration job' do
       report_id = FitGapReport.find_by!(portfolio:, vacancy:).id
 
       override!(level: 2)
@@ -83,7 +83,7 @@ RSpec.describe 'Fit-gap integrity', type: :request do
       expect(FitGapGeneratorWorker.jobs.size).to eq(1)
     end
 
-    it 'regenerate_fitgap tidak menghapus laporan' do
+    it 'regenerate_fitgap does not delete the report' do
       report_id = FitGapReport.find_by!(portfolio:, vacancy:).id
 
       post "/api/v1/portfolios/#{portfolio.id}/regenerate_fitgap", params: { vacancy_id: vacancy.id },
@@ -94,7 +94,7 @@ RSpec.describe 'Fit-gap integrity', type: :request do
       expect(FitGapGeneratorWorker.jobs.size).to eq(1)
     end
 
-    it 'dua override beruntun: job ganda hanya meregenerasi sekali dan hasil akhirnya mencerminkan override terakhir' do
+    it 'two overrides in a row: duplicate jobs regenerate once and the result reflects the last override' do
       override!(level: 2)
       override!(level: 1, text: 'Setelah membaca ulang transkrip, tidak ada contoh nyata.')
       expect(FitGapGeneratorWorker.jobs.size).to eq(2)
@@ -109,13 +109,13 @@ RSpec.describe 'Fit-gap integrity', type: :request do
     end
   end
 
-  describe 'jalur gagal regenerasi' do
+  describe 'regeneration failures' do
     before do
       generate_report!
       override!(level: 2)
     end
 
-    it 'error model narasi: laporan tetap diperbarui dengan narasi cadangan' do
+    it 'narrative model error: the report is still updated with a fallback narrative' do
       allow(gemini).to receive(:generate_content).and_raise(Gemini::HttpClient::TimeoutError, 'timeout')
 
       FitGapGeneratorWorker.drain
@@ -126,7 +126,7 @@ RSpec.describe 'Fit-gap integrity', type: :request do
       expect(report['overall_narrative']).to match(/skill matches/)
     end
 
-    it 'kegagalan tak terduga: laporan lama tetap tersedia, stale, dan membawa pesan error tanpa data pribadi' do
+    it 'unexpected failure: the old report stays available, stale, with an error message and no personal data' do
       allow_any_instance_of(FitGap::Engine).to receive(:call).and_raise(StandardError, "boom #{reason}")
 
       expect { FitGapGeneratorWorker.drain }.to raise_error(StandardError)

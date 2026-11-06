@@ -61,8 +61,8 @@ export default function FitGapReportPage() {
     if (portfolio) fetchReport();
   }, [portfolio, fetchReport]);
 
-  // Polling selama laporan pertama dibuat, atau selama versi lama sedang diperbarui (F-09).
-  // Berhenti bila pembaruan gagal, agar tidak memanggil API tanpa akhir.
+  // Poll while the first report is generated or an old one is being refreshed.
+  // Stop when the refresh failed so we do not poll forever.
   const updating = !!report?.stale && !report?.generation_error;
   usePolling(fetchReport, 5000, (generating || updating) && !!portfolio);
 
@@ -72,7 +72,7 @@ export default function FitGapReportPage() {
     setActionError(null);
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
-      // Versi lama tetap tampil sampai versi baru siap (sebelumnya laporan dikosongkan).
+      // Keep showing the old version until the new one is ready.
       if (report) setReport({ ...report, stale: true, generation_error: null });
       else setGenerating(true);
     } catch (e) {
@@ -164,7 +164,7 @@ export default function FitGapReportPage() {
         </p>
       )}
 
-      {/* State parsial: versi lama tampil selama versi baru dibuat (F-09) */}
+      {/* Partial state: the old version stays visible while a new one is built */}
       {updating && (
         <div role="status" className="flex items-start gap-2 text-sm border border-blue-200 bg-blue-50 text-blue-900 rounded-lg px-3 py-2">
           <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin" aria-hidden />

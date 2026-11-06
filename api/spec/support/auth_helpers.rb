@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# Helper autentikasi untuk request spec.
-# API mempercayai klaim JWT (tanpa lookup user ke DB) dan me-resolve tenant
-# dari klaim `scheme`, jadi tes cukup membuat organisasi + token yang cocok.
+# Auth helpers for request specs.
+# The API trusts JWT claims (no user lookup) and resolves the tenant from
+# the `scheme` claim, so a matching organisation and token are enough.
 module AuthHelpers
   TEST_SCHEME = 'test-corp'
 
@@ -22,8 +22,8 @@ module AuthHelpers
     { 'Authorization' => "Bearer #{token}" }
   end
 
-  # Menjalankan blok dengan tenant aktif, untuk membuat data langsung di DB
-  # (model dengan TenantScoped mengisi tenant_id dari Current.tenant_id).
+  # Runs the block with a current tenant so records can be created directly
+  # (TenantScoped models take tenant_id from Current.tenant_id).
   def with_tenant(organization = test_organization, &block)
     Current.using(organization: organization, tenant_id: organization.id, &block)
   end

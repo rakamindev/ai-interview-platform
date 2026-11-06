@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module Overrides
-  # Menerapkan override level dari asesor (F-04, F-05):
-  # 1. memvalidasi level, alasan, dan status portofolio;
-  # 2. dalam SATU transaksi dengan row lock pada skill: memperbarui state terkini
-  #    (assessor_overrides) dan menambah satu baris riwayat (assessor_override_events).
-  # Bila salah satu gagal, keduanya dibatalkan (tidak ada partial write).
+  # Applies an assessor's level override:
+  # 1. validates the level, the reason and the portfolio status;
+  # 2. in ONE transaction with a row lock on the skill, updates the current
+  #    override (assessor_overrides) and appends a history entry (assessor_override_events).
+  # If either write fails, both are rolled back.
   class Apply
     Result = Struct.new(:override, :event, :created, :error, :status, keyword_init: true) do
       def success? = error.nil?
@@ -30,7 +30,7 @@ module Overrides
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.first, :unprocessable_entity)
     rescue ActiveRecord::ActiveRecordError
-      # Pesan generik: jangan bocorkan detail internal atau isi alasan.
+      # Generic message: do not leak internals or the reason text.
       failure('Could not save the override. Please try again.', :internal_server_error)
     end
 
@@ -49,8 +49,8 @@ module Overrides
     end
 
     def apply!
-      # SELECT ... FOR UPDATE: dua asesor yang meng-override skill yang sama
-      # diproses berurutan, sehingga previous_level selalu akurat.
+      # SELECT ... FOR UPDATE: concurrent overrides of the same skill run one
+      # after another, so previous_level is always correct.
       @skill.lock!
       current_level = @skill.assessor_override&.override_level || @skill.ai_level
       raise Unchanged if @level == current_level

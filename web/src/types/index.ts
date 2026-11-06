@@ -94,7 +94,7 @@ export interface PortfolioSkill {
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
-  /** Riwayat koreksi asesor, terbaru di atas (F-05). */
+  /** Assessor correction history, newest first. */
   override_history?: OverrideEvent[];
 }
 
@@ -103,7 +103,7 @@ export interface OverrideEvent {
   previous_level: number;
   new_level: number;
   ai_level: number;
-  /** null untuk koreksi lama yang dibuat sebelum alasan diwajibkan. */
+  /** null for legacy corrections made before reasons were required. */
   reason: string | null;
   actor_id: number;
   legacy: boolean;
@@ -143,12 +143,12 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  /** Level yang dibutuhkan lowongan (F-06). */
+  /** Level required by the vacancy. */
   required_level?: number;
-  /** Nama lama dari API; dipakai sebagai cadangan untuk laporan lama. */
+  /** Older field name from the API; used as a fallback for old reports. */
   expected_level?: number;
   candidate_level?: number | null;
-  /** Level asli dari AI sebelum dikoreksi asesor (F-07). */
+  /** Original AI level before an assessor correction. */
   ai_level?: number | null;
   is_override?: boolean;
   override_reason?: string | null;
@@ -164,9 +164,9 @@ export interface FitGapReport {
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
-  /** Laporan sedang diperbarui setelah koreksi; versi lama tetap ditampilkan (F-09). */
+  /** The report is being refreshed after a correction; the old version is shown. */
   stale?: boolean;
-  /** Pesan generik bila pembaruan terakhir gagal. */
+  /** Generic message when the last refresh failed. */
   generation_error?: string | null;
 }
 

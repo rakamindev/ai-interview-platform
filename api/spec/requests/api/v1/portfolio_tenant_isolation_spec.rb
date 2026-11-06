@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-# F-02 (P0): portofolio, skill, override, dan fit-gap hanya boleh diakses oleh
-# organisasi pemilik sesi. Organisasi lain harus menerima 404 tanpa data apa pun.
+# F-02 (P0): portfolios, skills, overrides and fit-gap reports are only reachable
+# by the owning organisation. Others get a 404 with no data.
 RSpec.describe 'Portfolio tenant isolation', type: :request do
   let!(:owner_data)    { create_portfolio_for(test_organization) }
   let!(:owner_vacancy) { create_vacancy_for(test_organization) }
@@ -31,23 +31,23 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
     expect(response.body).not_to include('Narasi fiktif')
   end
 
-  describe 'organisasi lain' do
-    it 'tidak bisa melihat portofolio lewat sesi' do
+  describe 'another organisation' do
+    it 'cannot view the portfolio through the session' do
       get "/api/v1/sessions/#{session_record.id}/portfolio", headers: intruder_headers
       expect_not_found_without_leak
     end
 
-    it 'tidak bisa meng-export portofolio (JSON)' do
+    it 'cannot export the portfolio (JSON)' do
       get "/api/v1/portfolios/#{portfolio.id}/export", params: { format: 'json' }, headers: intruder_headers
       expect_not_found_without_leak
     end
 
-    it 'tidak bisa meng-export portofolio (PDF)' do
+    it 'cannot export the portfolio (PDF)' do
       get "/api/v1/portfolios/#{portfolio.id}/export", params: { format: 'pdf' }, headers: intruder_headers
       expect_not_found_without_leak
     end
 
-    it 'tidak bisa meng-override skill dan tidak ada override yang tersimpan' do
+    it 'cannot override a skill and nothing is saved' do
       expect do
         post "/api/v1/portfolio_skills/#{skill.id}/override",
              params:  { override: { override_level: 1, assessor_notes: 'Percobaan dari organisasi lain.' } },
@@ -58,12 +58,12 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
       expect_not_found_without_leak
     end
 
-    it 'tidak bisa membaca fit-gap report' do
+    it 'cannot read the fit-gap report' do
       get "/api/v1/portfolios/#{portfolio.id}/fitgap/#{owner_vacancy.id}", headers: intruder_headers
       expect_not_found_without_leak
     end
 
-    it 'tidak bisa memicu fit-gap baru dan tidak ada job yang diantrekan' do
+    it 'cannot trigger a new fit-gap and no job is queued' do
       intruder_vacancy = create_vacancy_for(other_organization)
 
       post "/api/v1/portfolios/#{portfolio.id}/fitgap",
@@ -73,7 +73,7 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
       expect(FitGapGeneratorWorker.jobs).to be_empty
     end
 
-    it 'tidak bisa meregenerasi fit-gap memakai lowongan pemilik, dan report pemilik tidak terhapus' do
+    it "cannot regenerate fit-gap with the owner's vacancy, and the owner's report is kept" do
       post "/api/v1/portfolios/#{portfolio.id}/regenerate_fitgap",
            params: { vacancy_id: owner_vacancy.id }, headers: intruder_headers, as: :json
 
@@ -82,7 +82,7 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
       expect(FitGapGeneratorWorker.jobs).to be_empty
     end
 
-    it 'tidak bisa meregenerasi fit-gap memakai lowongannya sendiri' do
+    it 'cannot regenerate fit-gap with its own vacancy' do
       intruder_vacancy = create_vacancy_for(other_organization)
 
       post "/api/v1/portfolios/#{portfolio.id}/regenerate_fitgap",
@@ -93,22 +93,22 @@ RSpec.describe 'Portfolio tenant isolation', type: :request do
     end
   end
 
-  describe 'organisasi pemilik' do
-    it 'bisa meng-export portofolionya' do
+  describe 'owning organisation' do
+    it 'can export its portfolio' do
       get "/api/v1/portfolios/#{portfolio.id}/export", params: { format: 'json' }, headers: owner_headers
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include('Kutipan fiktif')
     end
 
-    it 'bisa membaca fit-gap report miliknya' do
+    it 'can read its fit-gap report' do
       get "/api/v1/portfolios/#{portfolio.id}/fitgap/#{owner_vacancy.id}", headers: owner_headers
 
       expect(response).to have_http_status(:ok)
       expect(json.dig('report', 'id')).to eq(owner_report.id)
     end
 
-    it 'bisa meng-override skill miliknya' do
+    it 'can override its skill' do
       post "/api/v1/portfolio_skills/#{skill.id}/override",
            params:  { override: { override_level: 2, assessor_notes: 'Bukti desain indeks masih dangkal.' } },
            headers: owner_headers,
