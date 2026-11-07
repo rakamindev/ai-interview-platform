@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DecisionEditor from "@/components/portfolio/DecisionEditor";
 import { DEFAULT_LEVEL_MEANING, NOT_RATED_TEXT, evidenceCounts } from "@/lib/portfolioReview";
@@ -163,9 +163,10 @@ export default function SkillRow({ skill, override, levelMeaning, roleExpectatio
                     {override.overridden_at ? ` · ${new Date(override.overridden_at).toLocaleString()}` : ""}
                   </p>
                 )}
-                <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => setEditing(true)}>
-                  {override ? "Change your decision" : skill.ai_level ? "Set your own level" : "Set level"}
-                </button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil className="mr-1.5 h-4 w-4" />
+                  {override ? "Change decision" : skill.ai_level ? "Set your level" : "Set level"}
+                </Button>
               </div>
             )
           )}

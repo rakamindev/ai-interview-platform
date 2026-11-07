@@ -326,20 +326,31 @@ export default function PortfolioPage() {
         </section>
       )}
 
-      <section className="mt-10 flex flex-wrap items-center gap-3 border-t pt-6">
-        <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Compare with a vacancy…" /></SelectTrigger>
-          <SelectContent>
-            {vacancies.map((v) => <SelectItem key={v.id} value={String(v.id)}>{v.role_title}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" disabled={!selectedVacancy} onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`)}>
-          Fit/gap report
-        </Button>
-        <Button variant="ghost" onClick={() => exportFile("pdf")}><Download className="mr-1 h-4 w-4" />Download PDF</Button>
-        <Button variant="ghost" size="sm" onClick={() => exportFile("json")}>JSON</Button>
-        <Link to={transcriptHref} className="text-sm text-primary underline-offset-2 hover:underline">Transcript</Link>
-        {exportError && <p className="w-full text-sm text-destructive">{exportError}</p>}
+      <section className="mt-10 border-t pt-6">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="min-w-0 space-y-3">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compare with a role</h2>
+            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Compare with a vacancy…" /></SelectTrigger>
+              <SelectContent>
+                {vacancies.map((v) => <SelectItem key={v.id} value={String(v.id)}>{v.role_title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button disabled={!selectedVacancy} onClick={() => navigate(`/assessments/${id}/sessions/${sessionId}/fitgap/${selectedVacancy}`)}>
+              Open fit/gap report
+            </Button>
+            <p className="text-xs text-muted-foreground">Choose a vacancy to see required vs decided levels.</p>
+          </div>
+          <div className="min-w-0 space-y-3">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Share or check the source</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" onClick={() => exportFile("pdf")}><Download className="mr-1 h-4 w-4" />Download PDF</Button>
+              <Button variant="ghost" size="sm" onClick={() => exportFile("json")}>JSON (for systems)</Button>
+              <Link to={transcriptHref} className="text-sm text-primary underline-offset-2 hover:underline">Transcript</Link>
+            </div>
+          </div>
+        </div>
+        {exportError && <p className="mt-3 text-sm text-destructive">{exportError}</p>}
       </section>
 
       <section className="mt-6 mb-10">
