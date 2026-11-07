@@ -1,0 +1,28 @@
+Raw gate output, run by Claude (AI agent) in its own shell, 2026-11-07 10:22:41 WIB, HEAD fcf6619 (app code 2801058)
+== cd api && bundle exec rspec
+.........2026-11-07T03:22:45.768Z pid=95867 tid=1un3 INFO: Sidekiq 7.3.10 connecting to Redis with options {:size=>10, :pool_name=>"internal", :url=>"redis://localhost:6379/1"}
+.......................................................................................................
+
+Finished in 9.9 seconds (files took 3.12 seconds to load)
+112 examples, 0 failures
+
+Randomized with seed 17915
+
+== cd web && npm test -- --run
+ ✓ src/stores/authAtom.test.ts (3 tests) 4ms
+ ✓ src/lib/portfolioReview.test.ts (15 tests) 34ms
+
+ Test Files  3 passed (3)
+      Tests  29 passed (29)
+   Start at  10:22:55
+   Duration  937ms (transform 144ms, setup 0ms, collect 210ms, tests 46ms, environment 1ms, prepare 1.46s)
+
+== cd web && npx tsc --noEmit
+exit 0
+== cd web && npm run build
+dist/assets/index-CmoxmaYc.css         32.86 kB │ gzip:  6.67 kB
+dist/assets/vendor-ui-BxhV_wRT.js     104.61 kB │ gzip: 35.42 kB
+dist/assets/vendor-misc-2IUw_yPv.js   123.75 kB │ gzip: 43.63 kB
+dist/assets/vendor-react-h55suRzX.js  181.45 kB │ gzip: 59.79 kB
+dist/assets/index-B_oC_9xY.js         194.65 kB │ gzip: 56.18 kB
+✓ built in 8.39s

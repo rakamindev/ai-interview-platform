@@ -140,3 +140,13 @@ Council IDs below are reviewer-local IDs, qualified here to avoid confusing Coun
 |---|---|---|---|
 | Round-two R2 | Medium (source review); ours | ✅ `8e70fd7`: `Generator#fail!` takes the generation row lock after the portfolio lock, fencing failure against reclaim. `portfolio_fail_reclaim_spec.rb`: real two-connection assertion, B claim false, claim_count 1, A fails its own run. [Red/green](evidence/council-r2-fail-red-green.txt): 1 failure → 0. | Synthetic bounded race, not a stress/all-path lock-order proof. |
 | A4 | P2 original triage; ours | ✅ `2801058`: label-aware comparison shared across carry-forward, stale saves, fallback lookup and orphan visibility. API assertions retain C++ L5/notes while C# stays unmodified. | Same-generation key collision is recorded but second row is not stored; canonical label rule is conservative, not semantic matching. A5 remains open. |
+
+### Pack-3 source review — presentation and review-state limits
+
+These are source-confirmed limits, not new browser executions or changes to the application. Source: `PortfoliosController#generation_json`, `PortfolioPage.tsx` earlier-decisions section, and `Generator#carry_overrides_forward!`.
+
+- **Rejected colliding discovery not shown:** `generation.validation.rejected_skills` records `duplicate_discovered_identity`, but the portfolio API omits validation and the page does not show the rejection: server-side diagnostic only.
+- **Earlier decisions visible, not resolvable:** the section shows skill and level ("Kept for the record"), not notes, reason or source run; there is no resolve/reattach action, and review routing ends there.
+- **Review flag can clear automatically:** when an orphan's exact skill returns at the originally seen AI level (without conflicting history), carry-forward reattaches it and clears `needs_review` without acknowledgement; this is "reason resolved" behavior, while the product rule for human acknowledgement remains undecided.
+
+"Flagged" for a missing skill therefore means shown as an earlier decision, not an in-page resolution workflow. Latest supplied raw Claude gate output at docs HEAD `fcf6619` / app `2801058`: [council-round2-gates-claude-raw.txt](evidence/council-round2-gates-claude-raw.txt). The earlier Claude gate file remains explicitly a summary. No new application/spec/config changes are part of this docs round.
