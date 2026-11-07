@@ -27,7 +27,9 @@ Fill in the required values in `config/application.yml`:
 | `GEMINI_PRO_MODEL` | e.g. `gemini-2.5-pro` |
 | `REDIS_URL` | e.g. `redis://localhost:6379/1` |
 | `ALLOWED_ORIGINS` | CORS origin for the frontend, e.g. `http://localhost:5173` |
-| `APP_BASE_URL` | Backend base URL, e.g. `http://localhost:3001` |
+| `WEB_BASE_URL` | Public frontend origin used for candidate invite links, e.g. `http://localhost:5173` |
+
+`WEB_BASE_URL` must be an absolute HTTP(S) origin without a path, query, fragment, or credentials. Production requires HTTPS. Invalid configuration stops the application during boot so broken candidate links are not generated.
 
 ---
 
@@ -49,7 +51,16 @@ rails db:seed
 
 ---
 
-## 4. Start Redis via Docker
+## 4. Run tests
+
+```bash
+RAILS_ENV=test bundle exec rails db:prepare
+RAILS_ENV=test bundle exec rspec
+```
+
+---
+
+## 5. Start Redis via Docker
 
 ```bash
 docker run -d -p 6379:6379 --name redis redis:alpine
@@ -57,7 +68,7 @@ docker run -d -p 6379:6379 --name redis redis:alpine
 
 ---
 
-## 5. Start Sidekiq
+## 6. Start Sidekiq
 
 ```bash
 bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
@@ -65,7 +76,7 @@ bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml
 
 ---
 
-## 6. Start the Rails server
+## 7. Start the Rails server
 
 ```bash
 bundle exec rails server
@@ -75,7 +86,7 @@ Runs on **port 3001** by default.
 
 ---
 
-## 7. Start the frontend
+## 8. Start the frontend
 
 ```bash
 cd ../ai-interview-web

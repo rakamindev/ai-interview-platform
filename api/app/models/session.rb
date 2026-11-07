@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
+# Represents one candidate interview attempt and its generated invitation.
 class Session < ApplicationRecord
   include TenantScoped
 
-  STATUSES   = %w[pending active ended failed].freeze
+  STATUSES = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
   belongs_to :assessment
@@ -26,8 +27,7 @@ class Session < ApplicationRecord
   def pending? = status == 'pending'
 
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    "#{Rails.configuration.x.web_base_url}/interview/#{invite_token}"
   end
 
   private

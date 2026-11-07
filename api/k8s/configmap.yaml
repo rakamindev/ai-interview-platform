@@ -17,5 +17,7 @@ data:
   GEMINI_FLASH_MODEL: gemini-2.5-flash
   GEMINI_PRO_MODEL: gemini-2.5-pro
   PROACTIVE_RECONNECT_AFTER: "510"
-  APP_BASE_URL: https://ai-interview-api.rakamin.com
+  # Public React origin used for candidate invitation links.
+  # Replace this placeholder with the deployed frontend domain.
+  WEB_BASE_URL: "https://<your-frontend-domain>"
   ALLOWED_ORIGINS: "https://<your-frontend-domain>"
