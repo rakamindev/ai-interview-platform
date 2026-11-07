@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_06_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -58,11 +58,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
 
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.integer "override_level", null: false
     t.text "assessor_notes"
     t.bigint "overridden_by", null: false
     t.datetime "overridden_at", default: -> { "now()" }
+    t.boolean "needs_review", default: false, null: false
+    t.string "review_reason"
+    t.bigint "first_made_on_generation_id"
+    t.bigint "last_decided_on_generation_id"
+    t.index ["first_made_on_generation_id"], name: "index_assessor_overrides_on_first_made_on_generation_id"
+    t.index ["last_decided_on_generation_id"], name: "index_assessor_overrides_on_last_decided_on_generation_id"
     t.index ["portfolio_skill_id"], name: "index_assessor_overrides_on_portfolio_skill_id", unique: true
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_overrides_ai_level"
     t.check_constraint "override_level >= 1 AND override_level <= 5", name: "chk_overrides_override_level"
@@ -89,6 +95,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.string "narrative_status", default: "generated", null: false
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -107,15 +114,43 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.index ["scheme"], name: "index_organizations_on_scheme", unique: true
   end
 
+  create_table "portfolio_generations", force: :cascade do |t|
+    t.bigint "portfolio_id", null: false
+    t.integer "sequence", null: false
+    t.string "status", default: "queued", null: false
+    t.integer "claim_count", default: 0, null: false
+    t.string "source", null: false
+    t.string "requested_model"
+    t.string "served_model"
+    t.string "provider_response_id"
+    t.string "prompt_version"
+    t.string "config_fingerprint"
+    t.string "error_code"
+    t.text "error_message"
+    t.jsonb "validation", default: {}, null: false
+    t.datetime "queued_at", default: -> { "now()" }, null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.index ["portfolio_id", "sequence"], name: "index_portfolio_generations_on_portfolio_id_and_sequence", unique: true
+    t.index ["portfolio_id"], name: "index_portfolio_generations_on_portfolio_id"
+    t.check_constraint "status::text = ANY (ARRAY['queued'::character varying, 'running'::character varying, 'retrying'::character varying, 'succeeded'::character varying, 'failed'::character varying, 'superseded'::character varying]::text[])", name: "chk_portfolio_generations_status"
+  end
+
   create_table "portfolio_skills", force: :cascade do |t|
     t.bigint "portfolio_id", null: false
     t.string "skill_id", limit: 50
     t.string "skill_label", limit: 255, null: false
     t.boolean "is_discovered", default: false, null: false
-    t.integer "ai_level", null: false
+    t.integer "ai_level"
     t.enum "ai_confidence", null: false, enum_type: "confidence_level"
     t.jsonb "evidence", default: [], null: false
     t.text "competency_summary", null: false
+    t.bigint "generation_id"
+    t.string "skill_key"
+    t.string "ai_level_reason"
+    t.jsonb "evidence_checks", default: [], null: false
+    t.index ["generation_id", "skill_key"], name: "index_portfolio_skills_on_generation_id_and_skill_key", unique: true
+    t.index ["generation_id"], name: "index_portfolio_skills_on_generation_id"
     t.index ["portfolio_id"], name: "index_portfolio_skills_on_portfolio_id"
     t.check_constraint "ai_level >= 1 AND ai_level <= 5", name: "chk_portfolio_skills_ai_level"
   end
@@ -126,7 +161,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.enum "generation_status", default: "pending", null: false, enum_type: "generation_status"
     t.datetime "generated_at"
     t.text "generation_error"
+    t.bigint "current_generation_id"
     t.index ["candidate_id"], name: "index_portfolios_on_candidate_id"
+    t.index ["current_generation_id"], name: "index_portfolios_on_current_generation_id"
     t.index ["session_id"], name: "index_portfolios_on_session_id", unique: true
   end
 
@@ -206,11 +243,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessor_overrides", "portfolio_generations", column: "first_made_on_generation_id"
+  add_foreign_key "assessor_overrides", "portfolio_generations", column: "last_decided_on_generation_id"
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
   add_foreign_key "fit_gap_reports", "vacancies"
+  add_foreign_key "portfolio_generations", "portfolios"
+  add_foreign_key "portfolio_skills", "portfolio_generations", column: "generation_id"
   add_foreign_key "portfolio_skills", "portfolios"
+  add_foreign_key "portfolios", "portfolio_generations", column: "current_generation_id"
   add_foreign_key "portfolios", "sessions"
   add_foreign_key "sessions", "assessments"
   add_foreign_key "transcript_turns", "sessions"

@@ -25,9 +25,10 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # The candidate opens this in the web app (/interview/:token), so it is built from WEB_APP_URL
+  # (config/initializers/web_app_url.rb), never from the API's own address (W25).
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    "#{Rails.configuration.x.web_app_url}/interview/#{invite_token}"
   end
 
   private

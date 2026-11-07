@@ -1,0 +1,9 @@
+## G1 migration up/down/up on local dev DB, Fri Nov  6 18:25:57 WIB 2026  [skill id, ai_level, ai_level_reason, evidence_checks count]
+### after up
+[[3, 3, nil, 0], [4, 3, nil, 0]]
+### down
+== 20261106130000 AddEvidenceIntegrityToPortfolioSkills: reverted (0.0358s) ===
+[[3, 3, :na, :na], [4, 3, :na, :na]]
+### up again
+== 20261106130000 AddEvidenceIntegrityToPortfolioSkills: migrated (0.0081s) ===
+[[3, 3, nil, 0], [4, 3, nil, 0]]

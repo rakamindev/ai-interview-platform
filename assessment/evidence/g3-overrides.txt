@@ -1,0 +1,62 @@
+# G3 (human authority): red run before implementing, 2026-11-06 ~17:15 WIB
+# Command: bundle exec rspec spec/requests/override_carry_forward_spec.rb spec/requests/override_concurrency_spec.rb
+/Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/api/spec/requests/override_concurrency_spec.rb:45:in `block (4 levels) in <main>': uninitialized constant Portfolios::SaveOverride (NameError)
+     Failure/Error: expect(response).to have_http_status(:ok)
+       expected the response to have status code :ok (200) but it was :created (201)
+     Failure/Error: expect(the_override.portfolio_skill_id).to eq(current_skill.id)
+       expected: 296
+            got: 295
+     Failure/Error: expect(the_override.made_on_generation_id).to eq(first_generation.id)
+     NoMethodError:
+     Failure/Error: expect(the_override.portfolio_skill_id).to eq(current_skill.id)
+       expected: 300
+            got: 299
+     Failure/Error:
+       expected #<AssessorOverride id: 38, portfolio_skill_id: 301, ai_level: 3, override_level: 4, assessor_notes: "Assessor judgement", overridden_by: 1, overridden_at: "2026-11-06 10:21:15.575041000 +0000"> to respond to :needs_review, :review_reason with 0 arguments
+     Failure/Error:
+
+# G3 review round (ChatGPT, on the actual diff): 2 more red tests before fixing, 2026-11-06 ~17:30 WIB
+# Command: bundle exec rspec spec/requests/override_carry_forward_spec.rb
+     Failure/Error:
+       expected #<AssessorOverride id: 98, portfolio_skill_id: 486, ai_level: 2, override_level: 5, assessor_notes: "...1-06 10:30:01.797110000 +0000", needs_review: false, review_reason: nil, made_on_generation_id: 912> to have attributes {:ai_level => 3, :made_on_generation_id => 912, :needs_review => true, :override_level => 5, :review_reason => "ai_level_changed"} but had attributes {:ai_level => 2, :made_on_generation_id => 912, :needs_review => false, :override_level => 5, :review_reason => nil}
+     Failure/Error: expect { rescore_with(model_output(level: 3, quote: quote)) }.not_to raise_error
+       expected no Exception, got #<ActiveRecord::RecordNotUnique:"PG::UniqueViolation: ERROR:  duplicate key value violates unique con...essor_overrides_on_portfolio_skill_id\"\nDETAIL:  Key (portfolio_skill_id)=(493) already exists.\n"> with backtrace:
+9 examples, 2 failures
+rspec ./spec/requests/override_carry_forward_spec.rb:90 # Assessor overrides across generations (G3) does not pretend the assessor reviewed an AI rating they never saw (stale screen keeps the review flag)
+rspec ./spec/requests/override_carry_forward_spec.rb:110 # Assessor overrides across generations (G3) keeps both decisions, flagged, when two overrides for one skill already exist on different reports
+# 1) stale-screen save recorded ai_level 2 and cleared needs_review although the assessor saw L3 (expected ai_level 3, needs_review true)
+# 2) two existing decisions for one skill: publication crashed with PG::UniqueViolation on index_assessor_overrides_on_portfolio_skill_id
+
+# Label split (D-21): red run before implementing (tests now expect first_made_on / decided_on), ~17:45 WIB
+10 examples, 4 failures
+rspec ./spec/requests/override_carry_forward_spec.rb:113 # Assessor overrides across generations (G3) keeps both decisions, flagged, when two overrides for one skill already exist on different reports
+rspec ./spec/requests/override_carry_forward_spec.rb:156 # Assessor overrides across generations (G3) keeps the earlier generation and records where the override was originally made
+rspec ./spec/requests/override_carry_forward_spec.rb:92 # Assessor overrides across generations (G3) does not pretend the assessor reviewed an AI rating they never saw (stale screen keeps the review flag)
+rspec ./spec/requests/override_carry_forward_spec.rb:132 # Assessor overrides across generations (G3) remembers which report the human first corrected, separately from the report of the latest decision
+
+# Review round 3 (orphaned semantics D-23, rename to last_decided_on): red run, ~18:05 WIB
+# (the tie-break test already passed: it documents existing deterministic behaviour)
+11 examples, 4 failures
+rspec ./spec/requests/override_carry_forward_spec.rb:113 # Assessor overrides across generations (G3) keeps both decisions, flagged, when two overrides for one skill already exist on different reports
+rspec ./spec/requests/override_carry_forward_spec.rb:92 # Assessor overrides across generations (G3) does not pretend the assessor reviewed an AI rating they never saw (stale screen keeps the review flag)
+rspec ./spec/requests/override_carry_forward_spec.rb:179 # Assessor overrides across generations (G3) keeps the earlier generation and records where the override was originally made
+rspec ./spec/requests/override_carry_forward_spec.rb:155 # Assessor overrides across generations (G3) remembers which report the human first corrected, separately from the report of the latest decision
+
+# GREEN after all G3 review fixes, entire suite (bundle exec rspec --seed 39486), Fri Nov  6 17:59:58 WIB 2026:
+Override save racing generation promotion
+  keeps exactly one override, on the current skill, whichever operation wins the lock
+
+Assessor overrides across generations (G3)
+  breaks a tie between conflicting decisions with identical timestamps by the higher id
+  does not touch overrides when a new generation fails
+  does not pretend the assessor reviewed an AI rating they never saw (stale screen keeps the review flag)
+  carries the override forward to the matching skill when the AI level is unchanged
+  keeps both decisions, flagged, when two overrides for one skill already exist on different reports
+  remembers which report the human first corrected, separately from the report of the latest decision
+  keeps the human level but flags it for review when the AI level changed
+  clears the review flag when the assessor saves the override again, recording the new AI level
+  keeps an override whose skill disappeared, flagged, and never attaches it to a similar-looking skill
+  applies a save made from a stale screen to the current skill, without a second override
+  keeps the earlier generation and records where the override was originally made
+
+44 examples, 0 failures

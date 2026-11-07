@@ -1,0 +1,9 @@
+## G3 migration up/down/up on local dev DB (columns: needs_review, review_reason, first_made_on_generation_id, last_decided_on_generation_id), Fri Nov  6 17:59:43 WIB 2026
+### after up  [id, skill, level, needs_review, first_made_on, last_decided_on]
+overrides=[[1, 3, 4, false, 1, 1]]
+### down
+== 20261106120000 AddReviewStateToAssessorOverrides: reverted (0.0479s) =======
+overrides=[[1, 3, 4, :na, :na, :na]]
+### up again
+== 20261106120000 AddReviewStateToAssessorOverrides: migrated (0.0587s) =======
+overrides=[[1, 3, 4, false, 1, 1]]

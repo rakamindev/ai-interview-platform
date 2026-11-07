@@ -1,0 +1,33 @@
+# Seeded fault proof (brief requirement): break our own fix on a scratch branch, show the test catches it, revert.
+# Branch: scratch/seeded-fault-w10 (from G2 commit a87c6ab). History is kept on that branch:
+#   1b6ded9 Revert "test(seeded-fault): remove monotonic publication guard (DO NOT MERGE)"
+#   b643080 test(seeded-fault): remove monotonic publication guard (DO NOT MERGE)
+#   a87c6ab feat: make portfolio generation lifecycle reliable
+# Fault: removed the monotonic-publication guard in Portfolios::Generator#publish! (commit b643080):
+#   @@ -222,11 +222,8 @@ module Portfolios
+#            next if @generation.terminal?
+#            next if lost_claim? # reclaimed by another worker after STALE_RUNNING_AFTER: its result wins
+#
+#   -        current = @portfolio.current_generation
+#   -        if current && current.sequence > @generation.sequence
+#   -          @generation.update!(status: 'superseded', finished_at: Time.current)
+#   -          next
+#   -        end
+#   +        # SEEDED FAULT (scratch branch only): the monotonic-publication guard is removed, so an
+#   +        # older generation that finishes late is published over a newer one again.
+#
+#            insert_skills!(data)
+#            @portfolio.update!(current_generation: @generation, generation_status: 'complete',
+
+## RED with the seeded fault (b643080)
+# Command: bundle exec rspec spec/requests/portfolio_generation_lifecycle_spec.rb --seed 39486
+# This runs the lifecycle spec file only (30 examples). The full suite at a87c6ab is 32 examples
+# (these 30 + 2 concurrency specs), all passing; see w10-green.txt.
+     Failure/Error: expect(current_skills.map(&:ai_level)).to eq([3])
+       expected: [3]
+            got: [1]
+30 examples, 1 failure
+rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:42 # Portfolio generation lifecycle does not let a late retry of an older request replace a newer completed result (W10)
+
+## GREEN after revert (1b6ded9, tree identical to a87c6ab), same command, same 30 examples
+30 examples, 0 failures

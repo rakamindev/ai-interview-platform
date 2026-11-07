@@ -1,0 +1,10 @@
+19:43:25 start
+$ cd api && docker build -t ai-interview-api:smoke .   # existing Dockerfile, unchanged
+#4 sha256:c6cf28de8a067787ee0d08f8b01d7f1566a508b56f6e549687b41dfd375f12c7 28.31MB / 49.58MB 890.5s
+19:58:30 stopped: base image ruby:3.3.2 still downloading (first layer ~26 of 50 MB after ~15 min, about 30 KB/s).
+
+RESULT: not completed. Network-bound base image pull; stopped inside the 30-minute cap.
+Not tested: no Dockerfile step ran and no container started.
+Boot evidence remains the local production smoke test (r1-r2-boot.txt).
+To re-run on a faster network: docker build -t ai-interview-api:smoke api/ and run it with RAILS_ENV=production,
+a dummy SECRET_KEY_BASE, WEB_APP_URL, and DB_HOST / REDIS_URL pointing at host.docker.internal.

@@ -1,0 +1,18 @@
+
+> ai-interview-web@0.0.0 test
+> vitest run --configLoader runner
+
+failed to load config from /Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/vite.config.ts
+
+⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯
+ReferenceError: __dirname is not defined
+    at eval (/Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/vite.config.ts:22:50)
+    at loadConfigFromFile (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:49586:64)
+    at async resolveConfig (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:49079:24)
+    at async _createServer (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vite/dist/node/chunks/dep-CkSfqg8D.js:38664:66)
+    at async createViteServer (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vitest/dist/chunks/cli-api.DVe0nWUx.js:6921:17)
+    at async createVitest (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vitest/dist/chunks/cli-api.DVe0nWUx.js:10212:17)
+    at async prepareVitest (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vitest/dist/chunks/cli-api.DVe0nWUx.js:10551:14)
+    at async startVitest (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vitest/dist/chunks/cli-api.DVe0nWUx.js:10498:14)
+    at async start (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vitest/dist/chunks/cac.BfaZ95xE.js:1414:15)
+    at async CAC.run (file:///Users/farros/Downloads/Rakamin-MagangHub/CaseStudy/ai-interview-platform/web/node_modules/vitest/dist/chunks/cac.BfaZ95xE.js:1393:2)

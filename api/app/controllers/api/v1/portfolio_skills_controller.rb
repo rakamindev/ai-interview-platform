@@ -7,33 +7,21 @@ module Api
 
       before_action :set_portfolio_skill
 
-      # POST /api/v1/portfolio-skills/:id/override
+      # POST /api/v1/portfolio_skills/:id/override
+      # Saving again updates the decision (200). Review state reflects the AI basis actually seen;
+      # a stale-screen save can retain a review flag.
       def override
-        existing = @portfolio_skill.assessor_override
-
-        if existing
-          if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
-          else
-            json_error(existing.errors.full_messages.first, :unprocessable_entity)
-          end
-        else
-          new_override = @portfolio_skill.build_assessor_override(
-            override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
-              overridden_by: current_user.id,
-              overridden_at: Time.current
-            )
-          )
-
-          if new_override.save
-            regenerate_stale_fitgap_reports
-            json_response({ override: override_json(new_override) }, :created)
-          else
-            json_error(new_override.errors.full_messages.first, :unprocessable_entity)
-          end
-        end
+        result = Portfolios::SaveOverride.new(
+          portfolio_skill: @portfolio_skill,
+          override_level:  override_params[:override_level],
+          assessor_notes:  override_params[:assessor_notes],
+          user_id:         current_user.id
+        ).call
+        @portfolio_skill = result.override.portfolio_skill
+        regenerate_stale_fitgap_reports
+        json_response({ override: override_json(result.override) }, result.created ? :created : :ok)
+      rescue ActiveRecord::RecordInvalid => e
+        json_error(e.record.errors.full_messages.first, :unprocessable_entity)
       end
 
       private
@@ -48,8 +36,7 @@ module Api
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        @portfolio_skill = PortfolioSkill.visible_to_current_tenant.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end
@@ -66,7 +53,9 @@ module Api
           override_level:     override.override_level,
           assessor_notes:     override.assessor_notes,
           overridden_by:      override.overridden_by,
-          overridden_at:      override.overridden_at
+          overridden_at:      override.overridden_at,
+          needs_review:       override.needs_review,
+          review_reason:      override.review_reason
         }
       end
     end

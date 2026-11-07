@@ -64,12 +64,17 @@ module Sessions
       )
     end
 
+    # Creates the first scoring generation (committed) and only then enqueues its job.
     def enqueue_portfolio_generation
       portfolio = @session.reload.portfolio
       return unless portfolio
 
-      PortfolioGeneratorWorker.perform_async(@session.id)
-      Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id}")
+      generation = Portfolios::RequestGeneration.new(portfolio: portfolio, source: 'session_end').call
+      Rails.logger.info("[N9/EndHandler] Enqueued N10 for session #{@session.id} generation #{generation.id}")
+    rescue Portfolios::RequestGeneration::EnqueueFailed => e
+      # The session has already ended and its transcript is safe. The run is marked failed, so the
+      # assessor sees "failed" with a Regenerate button instead of a portfolio that never arrives.
+      Rails.logger.error("[N9/EndHandler] #{e.message}")
     end
   end
 end

@@ -1,0 +1,70 @@
+Agent-run, synthetic data; A4 identity regressions.
+RED on unfixed c5ee6b3: four examples; a/b/c fail, same-C++ control passes.
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+WARNING: Skipping key "GEMINI_API_KEY". Already set in ENV.
+WARNING: Skipping key "ALLOWED_ORIGINS". Already set in ENV.
+
+Randomized with seed 10761
+
+Discovered skill identity across generations
+  carries a correction to the same discovered C++ identity without a review flag
+  does not redirect a stale C++ save or find the current C# decision through the colliding key (FAILED - 1)
+  records the second colliding discovered label instead of silently dropping it (FAILED - 2)
+  preserves a C++ correction as an earlier decision when the next report discovers C# (FAILED - 3)
+
+Failures:
+
+  1) Discovered skill identity across generations does not redirect a stale C++ save or find the current C# decision through the colliding key
+     Failure/Error: expect(response).to have_http_status(:created)
+       expected the response to have status code :created (201) but it was :ok (200)
+     # ./spec/requests/discovered_skill_identity_spec.rb:62:in `block (2 levels) in <top (required)>'
+
+  2) Discovered skill identity across generations records the second colliding discovered label instead of silently dropping it
+     Failure/Error:
+       expect(generation.validation.fetch('rejected_skills')).to include(
+         'skill_label' => 'C#', 'reason' => 'duplicate_discovered_identity'
+       )
+
+       expected [] to include {"skill_label" => "C#", "reason" => "duplicate_discovered_identity"}
+       Diff:
+       @@ -1,2 +1 @@
+       -"reason" => "duplicate_discovered_identity",
+       -"skill_label" => "C#",
+       +[]
+     # ./spec/requests/discovered_skill_identity_spec.rb:77:in `block (2 levels) in <top (required)>'
+
+  3) Discovered skill identity across generations preserves a C++ correction as an earlier decision when the next report discovers C#
+     Failure/Error: expect(AssessorOverride.find_by(portfolio_skill_id: current.id)).to be_nil
+
+       expected: nil
+            got: #<AssessorOverride id: 805, portfolio_skill_id: 3287, ai_level: 3, override_level: 5, assessor_notes:...: false, review_reason: nil, first_made_on_generation_id: 4998, last_decided_on_generation_id: 4998>
+     # ./spec/requests/discovered_skill_identity_spec.rb:43:in `block (2 levels) in <top (required)>'
+
+Finished in 0.62708 seconds (files took 1.7 seconds to load)
+4 examples, 3 failures
+
+Failed examples:
+
+rspec ./spec/requests/discovered_skill_identity_spec.rb:53 # Discovered skill identity across generations does not redirect a stale C++ save or find the current C# decision through the colliding key
+rspec ./spec/requests/discovered_skill_identity_spec.rb:74 # Discovered skill identity across generations records the second colliding discovered label instead of silently dropping it
+rspec ./spec/requests/discovered_skill_identity_spec.rb:36 # Discovered skill identity across generations preserves a C++ correction as an earlier decision when the next report discovers C#
+
+Randomized with seed 10761
+
+GREEN with shared comparison identity in generator, SaveOverride and orphan serialization:
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+WARNING: Skipping key "GEMINI_API_KEY". Already set in ENV.
+WARNING: Skipping key "ALLOWED_ORIGINS". Already set in ENV.
+
+Randomized with seed 26680
+
+Discovered skill identity across generations
+  preserves a C++ correction as an earlier decision when the next report discovers C#
+  does not redirect a stale C++ save or find the current C# decision through the colliding key
+  carries a correction to the same discovered C++ identity without a review flag
+  records the second colliding discovered label instead of silently dropping it
+
+Finished in 0.67354 seconds (files took 1.65 seconds to load)
+4 examples, 0 failures
+
+Randomized with seed 26680

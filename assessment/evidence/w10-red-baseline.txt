@@ -1,0 +1,34 @@
+# W10 red run against baseline code (commit b836d02, branch feat/trustworthy-assessment-lifecycle), Fri Nov  6 15:54:35 WIB 2026
+
+Randomized with seed 39486
+FF
+
+Failures:
+
+  1) Portfolio generation lifecycle keeps the assessor override when a late retry runs after it was saved (D4 via W10)
+     Failure/Error: expect(overrides.count).to eq(1)
+
+       expected: 1
+            got: 0
+
+       (compared using ==)
+     # ./spec/requests/portfolio_generation_lifecycle_spec.rb:69:in `block (2 levels) in <top (required)>'
+
+  2) Portfolio generation lifecycle does not let a late retry of an older request replace a newer completed result (W10)
+     Failure/Error: expect(current_skills.map(&:ai_level)).to eq([3])
+
+       expected: [3]
+            got: [1]
+
+       (compared using ==)
+     # ./spec/requests/portfolio_generation_lifecycle_spec.rb:51:in `block (2 levels) in <top (required)>'
+
+Finished in 0.57217 seconds (files took 2.85 seconds to load)
+2 examples, 2 failures
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:55 # Portfolio generation lifecycle keeps the assessor override when a late retry runs after it was saved (D4 via W10)
+rspec ./spec/requests/portfolio_generation_lifecycle_spec.rb:40 # Portfolio generation lifecycle does not let a late retry of an older request replace a newer completed result (W10)
+
+Randomized with seed 39486

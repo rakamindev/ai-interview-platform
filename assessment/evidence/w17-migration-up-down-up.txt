@@ -1,0 +1,14 @@
+## before: original canned fallback row (W17, from the walkthrough)
+[[2, nil, "Candidate shows 0 skill matches, 0 exceeds, and 1 gaps against role requirements."]]
+## up
+== 20261106140000 AddNarrativeStatusToFitGapReports: migrating ================
+== 20261106140000 AddNarrativeStatusToFitGapReports: migrated (0.0485s) =======
+[[2, nil, nil, "unavailable"]]
+## down
+== 20261106140000 AddNarrativeStatusToFitGapReports: reverting ================
+== 20261106140000 AddNarrativeStatusToFitGapReports: reverted (0.0046s) =======
+[[2, nil, nil]]
+## up again
+== 20261106140000 AddNarrativeStatusToFitGapReports: migrating ================
+== 20261106140000 AddNarrativeStatusToFitGapReports: migrated (0.0112s) =======
+[[2, nil, nil, "unavailable"]]

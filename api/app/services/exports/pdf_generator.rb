@@ -7,13 +7,24 @@ module Exports
   # N14: Generates a PDF export of a portfolio, optionally including a fit/gap report.
   # Returns the PDF as a binary string.
   class PdfGenerator
-    LEVEL_LABELS = { 1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5' }.freeze
+    LEVEL_LABELS = Hash.new('Not rated').merge(1 => 'L1', 2 => 'L2', 3 => 'L3', 4 => 'L4', 5 => 'L5').freeze
     CONFIDENCE_LABELS = { 'high' => 'High', 'medium' => 'Medium', 'low' => 'Low' }.freeze
     RESULT_LABELS = {
       'match'        => 'Match',
       'gap'          => 'Gap',
       'exceed'       => 'Exceeds',
       'not_assessed' => 'Not Assessed'
+    }.freeze
+
+    # W20: Prawn's built-in fonts only cover Windows-1252, so AI text with characters such as
+    # "→", "≥" or "✓" made the export fail. DejaVu Sans (vendor/fonts, Bitstream Vera licence,
+    # see LICENSE-DejaVu.txt) covers them, so the text is printed exactly as written.
+    FONT_DIR = Rails.root.join('vendor/fonts')
+    FONT_FAMILY = {
+      normal:      FONT_DIR.join('DejaVuSans.ttf').to_s,
+      bold:        FONT_DIR.join('DejaVuSans-Bold.ttf').to_s,
+      italic:      FONT_DIR.join('DejaVuSans.ttf').to_s,
+      bold_italic: FONT_DIR.join('DejaVuSans-Bold.ttf').to_s
     }.freeze
 
     def initialize(portfolio:, vacancy: nil)
@@ -27,6 +38,8 @@ module Exports
     # Returns PDF binary string.
     def call
       Prawn::Document.new(page_size: 'A4', margin: [40, 50, 40, 50]) do |pdf|
+        pdf.font_families.update('DejaVuSans' => FONT_FAMILY)
+        pdf.font('DejaVuSans')
         render_header(pdf)
         render_portfolio_section(pdf)
         render_fit_gap_section(pdf) if @fit_gap
@@ -96,8 +109,23 @@ module Exports
       if skill.evidence.any?
         pdf.move_down 4
         pdf.font_size(10) do
-          pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          pdf.text "Transcript excerpts (a match does not validate the AI rating):", style: :bold
+          skill.evidence.each do |quote|
+            check = Array(skill.evidence_checks).find { |item| item['quote'] == quote }
+            case check&.fetch('status', nil)
+            when 'transcript_match'
+              pdf.text "Found in transcript (turns #{Array(check['turn_numbers']).join(', ')})"
+              pdf.text "  • #{quote}"
+            when 'no_exact_match'
+              pdf.text 'AI-proposed excerpt - no exact transcript match; check source'
+              pdf.text "  • #{quote}"
+            when 'not_found'
+              pdf.text 'No supporting transcript excerpt found'
+            else
+              pdf.text 'Excerpt not checked against the transcript; check source'
+              pdf.text "  • #{quote}"
+            end
+          end
         end
       end
 

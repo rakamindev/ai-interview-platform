@@ -1,0 +1,15 @@
+# W25 production boot with and without WEB_APP_URL (06 Nov 19:53)
+
+$ RAILS_ENV=production SECRET_KEY_BASE=<dummy> rails runner ...   # WEB_APP_URL unset
+config/initializers/web_app_url.rb:17:in `resolve': WEB_APP_URL is not set. Set it to the public URL of the web app (candidate invite links are built from it). (ArgumentError)
+
+$ ... WEB_APP_URL="https://<your-frontend-domain>"   # the k8s placeholder
+config/initializers/web_app_url.rb:26:in `rescue in resolve': WEB_APP_URL must be an http(s) URL, got "https://<your-frontend-domain>". (ArgumentError)
+
+$ ... WEB_APP_URL=https://interview.example.com
+BOOT_OK invite_base=https://interview.example.com
+
+## Development server: invite link from GET /api/v1/assessments/1/sessions
+http://localhost:5173/interview/<token>   (web app interview page; token redacted)
+
+## Full suite: 84 examples, 0 failures

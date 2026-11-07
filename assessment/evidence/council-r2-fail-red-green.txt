@@ -1,0 +1,40 @@
+Agent-run, synthetic data; R2 failure/reclaim regression.
+RED on unfixed c5ee6b3: bundle exec rspec spec/requests/portfolio_fail_reclaim_spec.rb
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+WARNING: Skipping key "GEMINI_API_KEY". Already set in ENV.
+WARNING: Skipping key "ALLOWED_ORIGINS". Already set in ENV.
+
+Randomized with seed 37321
+F
+
+Failures:
+
+  1) Reclaim during portfolio failure makes a reclaimer wait for failure and refuse the failed run
+     Failure/Error: expect(@reclaim_thread.value).to be(false)
+
+       expected false
+            got true
+     # ./spec/requests/portfolio_fail_reclaim_spec.rb:70:in `block (2 levels) in <top (required)>'
+
+Finished in 0.32659 seconds (files took 2.47 seconds to load)
+1 example, 1 failure
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_fail_reclaim_spec.rb:32 # Reclaim during portfolio failure makes a reclaimer wait for failure and refuse the failed run
+
+Randomized with seed 37321
+
+
+GREEN with generation row lock: same spec and assertions
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+WARNING: Skipping key "GEMINI_API_KEY". Already set in ENV.
+WARNING: Skipping key "ALLOWED_ORIGINS". Already set in ENV.
+
+Randomized with seed 27382
+.
+
+Finished in 0.74635 seconds (files took 1.67 seconds to load)
+1 example, 0 failures
+
+Randomized with seed 27382

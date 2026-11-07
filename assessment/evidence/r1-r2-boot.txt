@@ -1,0 +1,77 @@
+# R1/R2 production boot evidence (06 Nov 2026 19:37 WIB)
+
+## BEFORE: R1
+$ RAILS_ENV=production SECRET_KEY_BASE=<dummy> bundle exec rails runner 'puts "BOOT_OK"'
+railties-7.0.10/lib/rails/railtie/configuration.rb:96:in `method_missing': undefined method `active_job' for an instance of Rails::Application::Configuration (NoMethodError)
+  from config/environments/production.rb:34:in `block in <main>'
+exit=1
+
+## BEFORE: R2
+$ bundle exec rails zeitwerk:check
+Hold on, I am eager loading the application.
+rails aborted!
+NameError: uninitialized constant AudioWebsocketMiddleware (NameError)
+    @mod.const_get(@cname, false)
+        ^^^^^^^^^^
+Did you mean?  AudioWebSocketMiddleware
+exit=1
+
+## AFTER R1 only (Active Job line removed): production boot now reaches eager load and fails on R2
+$ RAILS_ENV=production SECRET_KEY_BASE=<dummy> bundle exec rails runner 'puts "BOOT_OK"'
+zeitwerk-2.7.5/lib/zeitwerk/cref.rb:62:in `const_get': uninitialized constant AudioWebsocketMiddleware (NameError)
+exit=1 (non-zero)
+
+## AFTER R1 + R2
+$ bundle exec rails zeitwerk:check
+Hold on, I am eager loading the application.
+All is good!
+exit=0
+
+$ RAILS_ENV=production SECRET_KEY_BASE=<dummy> bundle exec rails runner (eager load + Redis ping)
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+BOOT_OK eager_load=true loaded=both middlewares
+sidekiq_redis_ping=PONG
+
+$ RAILS_ENV=production SECRET_KEY_BASE=<dummy> DB_HOST=localhost DB_NAME=rakamin_development WEB_CONCURRENCY=0 bundle exec puma -C config/puma.rb -p 3099
+Puma starting in single mode...
+* Puma version: 5.6.9 (ruby 3.3.2-p78) ("Birdie's Version")
+*  Min threads: 16
+*  Environment: production
+* Listening on http://0.0.0.0:3099
+
+$ curl -i localhost:3099/api/v1/health
+HTTP/1.1 301 Moved Permanently
+(301 = config.force_ssl redirecting plain HTTP to HTTPS, expected in production)
+Location: https://localhost:3099/api/v1/health
+
+$ curl -i -H "X-Forwarded-Proto: https" localhost:3099/api/v1/health   # as sent by a TLS-terminating load balancer
+HTTP/1.1 200 OK
+{"status":"ok"}
+
+$ curl -i -H "X-Forwarded-Proto: https" localhost:3099/api/v1/assessments   # no token: auth still enforced
+HTTP/1.1 401 Unauthorized
+
+## Development: WebSocket middlewares load and are mounted before TenantResolverMiddleware
+$ bundle exec rails middleware | grep -n "WebSocket\|TenantResolver"
+22:use AudioWebSocketMiddleware
+23:use CoverageWebSocketMiddleware
+24:use TenantResolverMiddleware
+
+## Development server restarted on the renamed files
+GET /api/v1/health -> {"status":"ok"}; WebSocket upgrade on /ws/sessions/1/audio -> HTTP 101 (middleware handles the route)
+
+## Full suite
+77 examples, 0 failures
+
+## What this proves and what it does not
+CONFIRMED (local, 6 Nov):
+- The app boots in production mode with eager loading (zeitwerk:check "All is good!").
+- A production-mode Puma server starts, /api/v1/health returns 200 behind an HTTPS proxy header,
+  authentication is still enforced (401 without a token), Sidekiq reaches the local Redis (PONG).
+UNVERIFIED (not proof of deployment readiness):
+- Real deployment secrets (a random dummy SECRET_KEY_BASE was used) and the production database
+  (DB_NAME pointed at the local development database).
+- Kubernetes behaviour: api/k8s/deployment.yaml probes call plain-HTTP /health with no
+  X-Forwarded-Proto, while production forces SSL (FORCE_SSL defaults to true) and redirects with 301.
+  Whether probes pass depends on cluster config not in this repo. Escalated, not changed.
+- Production Redis/Sidekiq under the real cluster, clustered Puma (R3), and a real WebSocket audio call.

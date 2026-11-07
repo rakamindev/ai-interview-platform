@@ -74,6 +74,29 @@ export interface TranscriptTurn {
   created_at: string;
 }
 
+export type GenerationStatus = "queued" | "running" | "retrying" | "succeeded" | "failed" | "superseded";
+
+/** One scoring attempt. Technical detail: shown only in the collapsed "Technical details". */
+export interface PortfolioGeneration {
+  id: number;
+  sequence: number;
+  status: GenerationStatus;
+  source: string;
+  requested_model?: string | null;
+  served_model?: string | null;
+  prompt_version?: string | null;
+  error_code?: string | null;
+  error_message?: string | null;
+  queued_at?: string;
+  finished_at?: string | null;
+}
+
+export interface RegenerateEligibility {
+  allowed: boolean;
+  reason?: "report_exists" | "in_progress" | "needs_admin";
+  message?: string;
+}
+
 export interface Portfolio {
   id: number;
   session_id: number;
@@ -81,29 +104,50 @@ export interface Portfolio {
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
+  current_generation?: PortfolioGeneration | null;
+  latest_generation?: PortfolioGeneration | null;
+  regenerate?: RegenerateEligibility;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }
 
+export type EvidenceStatus = "transcript_match" | "no_exact_match" | "not_found";
+
+/** Textual provenance only: says whether the words appear in the transcript, not whether they justify a level. */
+export interface EvidenceCheck {
+  quote: string;
+  status: EvidenceStatus;
+  turn_numbers?: number[];
+  suggested_turn?: number;
+}
+
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | null;
   skill_label: string;
   is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
-  ai_confidence: string;  // "high" | "medium" | "low"
+  ai_level: number | null; // 1..5, or null = Not rated
+  ai_level_reason?: "missing_level" | "invalid_level" | "ai_omitted" | null;
+  ai_confidence: "high" | "medium" | "low";
   evidence: string[];
+  evidence_checks?: EvidenceCheck[];
   competency_summary: string;
 }
 
 export interface AssessorOverride {
   id: number;
   portfolio_skill_id: number;
-  ai_level: number;
+  ai_level: number | null; // the AI level the assessor saw when deciding
   override_level: number;
   assessor_notes: string;
   overridden_by?: number;
   overridden_at?: string;
+  needs_review?: boolean;
+  review_reason?: "ai_level_changed" | "skill_missing_in_current" | "conflicting_decisions" | "superseded_by_newer_decision" | null;
+  first_made_on_generation_id?: number | null;
+  last_decided_on_generation_id?: number | null;
+  skill_label?: string;
+  orphaned?: boolean;
 }
 
 export interface Vacancy {
@@ -129,7 +173,8 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
+  /** The vacancy's required level (the API field is expected_level). */
+  expected_level: number;
   candidate_level?: number;
   result: SkillComparisonResult;
   delta?: number;
@@ -141,8 +186,10 @@ export interface FitGapReport {
   portfolio_id: number;
   vacancy_id: number;
   skill_comparisons: SkillComparison[];
-  culture_narrative: string;
-  overall_narrative: string;
+  culture_narrative: string | null;
+  overall_narrative: string | null;
+  /** "unavailable" when the AI wrote no narrative; the skill table is complete either way. */
+  narrative_status: "generated" | "unavailable";
   generated_at: string;
 }
 
