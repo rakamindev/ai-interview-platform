@@ -41,7 +41,7 @@ Every problem found in the original code, with its evidence and its current stat
 | R2 | P0 | Defect | Zeitwerk eager-load fails (`AudioWebsocketMiddleware` naming), so production **does not boot** | ✅ files renamed to match their classes; `zeitwerk:check` passes |
 | R4 | P2 | Ops | k8s probes call plain-HTTP `/health` while production forces SSL (301); depends on cluster config | 📤 found during the R1/R2 smoke test |
 | R3 | P2 | Ops | Cluster mode keeps per-process WebSocket state; reconnects may land on another worker | 📤 |
-| E1 | P1 | Spec gap | No backend specs, no web test runner, no CI | 🟡 final acceptance target: 105 backend examples, Vitest 29/29; results in evidence/checkpoint/freeze-verification.md; application types/build pass; CI absent; separate Vite-config typecheck lacks Node types |
+| E1 | P1 | Spec gap | No backend specs, no web test runner, no CI | 🟡 post-council acceptance: 107 backend examples, Vitest 29/29; results in evidence/checkpoint/council-freeze-verification.md (historical freeze: 105/29); application types/build pass; CI absent; separate Vite-config typecheck lacks Node types |
 
 ## Assessment integrity (AI output and scoring lifecycle)
 | ID | Sev | Type | Finding | Status |
@@ -50,7 +50,7 @@ Every problem found in the original code, with its evidence and its current stat
 | D1 / W11 | P1 | Defect | A missing level became L1; an unconfigured skill was accepted; the skill id was invented | ✅ G1 `5f77f55` |
 | D1 / W13 | P1 | Defect | Quotes not in the transcript were accepted as evidence | ✅ G1 `5f77f55` |
 | D1 | P1 | Defect | Confidence was taken from the model instead of the PRD rule | ✅ G1 `5f77f55` |
-| D5 | P2 | Defect | A portfolio could be stuck "generating" forever after a worker crash | ✅ G2 |
+| D5 | P2 | Defect | A portfolio could be stuck "generating" forever after a worker crash | 🟡 G2 handles classified failures; unexpected first-scoring loss still has the Council A1 dead end below |
 | W7 / W8 | P0 | Defect | Scoring failed after a good interview (preview model on the hard-coded `v1` API; `gemini-2.5-pro` unavailable) with only "API returned 404" | 🟡 the failure is now classified and explained (needs admin); the hard-coded `v1` and dead code defaults are not fixed |
 | W9 / D2 | P2 | Defect | A 503 was never retried (faraday-retry skips POST) | ✅ Sidekiq retries temporary errors with the right classification (G2) |
 | M1–M3 | P0 | Ops | Configured models are unlisted, near shutdown (17 Nov), or auto-routed (1 Dec) | 📤 config choice; the failure path is now handled |
@@ -109,3 +109,25 @@ Latest priorities and open work: `assessment/remediation-plan.md`. Decision rati
 ## Final freeze boundary
 
 Signed-token HTTP tenant binding is committed in `3bc367b`; the issuer/membership B1 boundary remains a multi-tenant release blocker, escalated. Unexpected errors can still leave a run running; quote matching has no word-boundary constraint; coverage confidence ignores evidence-check quality; stored fit/gap can be stale. No additional fixes are authorized by the final code freeze. See `evidence/checkpoint/freeze-verification.md` for final results and version scope.
+
+## Council review (post-freeze, 7 November 2026)
+
+Council IDs below are reviewer-local IDs, qualified here to avoid confusing Council C1 with the original C-series findings. Severity and origin follow the council triage; these additional rows do not change the historical 56-finding or original-code P0 denominator. Two fixes move the implementation from `3042704` to `2789bbc`; the rest are disclosures, not remediations. Source review is not execution proof. Gate provenance: [council freeze record](evidence/checkpoint/council-freeze-verification.md).
+
+| Council ID | Triage severity | Origin | Finding / evidence | Status |
+|---|---|---|---|---|
+| C1 | P2 | Ours | Reclaim could change claim ownership after publication's check. A >10-minute provider call and a narrow publication race were required; this is same-run publication, not older-over-newer. `Generator#publish!`; real separate-connection regression `portfolio_reclaim_during_publish_spec.rb`. | ✅ `806d0e3`: generation row locked as well as portfolio; reclaimer waits then refuses completed run. [Red/green](evidence/council-c1-red-green.txt). |
+| A2 | P1, conditional on colliding legacy rows | Ours | Backfill unique-key violation stops migration/deploy for normalized collisions such as C++/C#. `20261106100001_backfill_portfolio_generations.rb`; `portfolio_backfill_collision_spec.rb`. | ✅ `2789bbc`: first configured identity retained; normalized prefixed collisions, including empty labels, suffixed. [Red/green](evidence/council-a2-red-green.txt); up/down/up. Migration is new in this PR and has never run in production. |
+| A1 | P1 | Ours (claim gate) + pre-existing (202 page) | After an unexpected error or killed worker on the first scoring, the immediate Sidekiq retry is a no-op; the page shows the spinner with no Retry button. API regenerate works after 10 minutes; there is no UI recovery path. `Generator#call/#claim!`, `RequestGeneration.regenerate_blocker`, portfolio 202 handling. Council triage: scratch re-run observed GET 202 before/after 11 min and POST regenerate 200 after 11 min. | ⬜ Disclosed; not fixed. Qualifies D5 above. |
+| A3 | P2 | Ours | Missing provider key raises during generator initialization, before claim; run remains queued and regenerate returns 409. `Generator#initialize`, `Gemini::HttpClient#initialize`. Source review only in council triage. | ⬜ Disclosed; not fixed. |
+| A4 | P2 | Ours | Live discovered-skill normalization collides for C++/C# and drops the second skill. `Generator#insert_skills!` / skill-key normalization. Reviewer normalization check; the A2 legacy-backfill fix does not fix this live path. | ⬜ Disclosed; not fixed. |
+| A5 | P2 | Ours | Valid JSON with no usable skills can publish all Not rated; existing report then blocks regenerate. `Generator#parse/#insert_skills!`, `RequestGeneration.regenerate_blocker`. Source review only. | ⬜ Disclosed; not fixed. |
+| A6 | P3 | Ours | Empty provider response is classified as network_error rather than invalid output. Provider/client error classification; council source review only. | ⬜ Disclosed; not fixed. |
+| A7 | P3 | Ours | Resolved conflict review flag can return on a later generation. Override carry-forward review state; council source review only. | ⬜ Disclosed; not fixed. |
+| S1 | P2, conditional on other roles sharing signing secret | Pre-existing | Audio/coverage WebSockets check signature and tenant, not role: `AudioWebSocketMiddleware#authenticate_and_load`, `CoverageWebSocketMiddleware#authenticate_assessor_by_token`. Today upstream issues admin only per triage. | ⬜ Disclosed; not fixed. HTTP tenant fixes do not establish role authorization for these sockets. |
+| S2 | P2 | Pre-existing | No filter_parameters configuration for invite tokens, passwords, names or notes; ordinary parameter logs can expose these. Council source/log review; not a fresh comprehensive log audit. | ⬜ Disclosed; not fixed. W29's speech-length fix is narrower. |
+| S3 | P3 | Pre-existing | Invite holder can end a session through `SessionsController#audio_complete`. Source review; overlaps original B5. | ⬜ Disclosed; not fixed. |
+| S4 | P3 | Ours | `demo:portfolio_states:clear` spans tenants and has no environment guard (`api/lib/tasks/demo.rake`). Source review. | ⬜ Disclosed; not fixed; keep synthetic demo commands away from production. |
+| S5 | P3 | Pre-existing | `Organization.identify` uses first-hit matching. Source review. | ⬜ Disclosed; not fixed. |
+| S6 | P3 | Pre-existing | Parse-error logs can include model text. Gemini client parse-error logging; council source review. | ⬜ Disclosed; not fixed. |
+| C2 | P3 | Ours (wording) | “Skills outside the assessment rejected” was too broad: unknown configured skills rejected; extra skills kept as AI suggestions (`Generator#insert_skills!`). | ✅ PR wording corrected; no code behavior change. |

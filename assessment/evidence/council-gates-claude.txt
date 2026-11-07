@@ -1,0 +1,9 @@
+Gates re-run by Claude (AI agent) on fix/council-c1-a2 @ 2789bbc, 7 Nov 2026 ~09:20 WIB, Claude's own shell (not Codex's sandbox)
+api: bundle exec rspec            -> 107 examples, 0 failures
+web: npm test -- --run            -> Test Files 3 passed (3); Tests 29 passed (29)
+web: npx tsc --noEmit             -> pass
+web: npm run build                -> built in 4.35s (dist/assets/index-B_oC_9xY.js 194.65 kB)
+diff e511d58..2789bbc secret grep (AIza|sk-|api_key=|private key) -> 0 hits
+commit trailers (Co-Authored-By / Generated with)                 -> none
+red/green files: c1 1 example 1 failure -> 1 example 0 failures; a2 1 example 1 failure (PG::UniqueViolation) -> 1 example 0 failures
+Migration diff reviewed by Claude: configured duplicates skip assessment_skill key; label step compares final prefixed normalised key.

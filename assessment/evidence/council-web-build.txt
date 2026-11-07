@@ -1,0 +1,3 @@
+
+> ai-interview-web@0.0.0 build
+> tsc && vite build
