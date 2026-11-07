@@ -757,6 +757,11 @@ class AudioWebSocketMiddleware
     return [nil, 'Session has ended'] if session.ended?
     return [nil, 'Session ID mismatch'] if session.id.to_s != session_id
 
+    # Enforce UU PDP explicit consent prior to processing candidate voice stream
+    if invite_token.present? && !session.consent_given?
+      return [nil, 'Candidate consent under UU PDP is required before starting audio streaming']
+    end
+
     [session, nil]
   end
 

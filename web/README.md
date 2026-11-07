@@ -97,3 +97,25 @@ public/
 - The `@` path alias resolves to `./src` (configured in `vite.config.ts` and `tsconfig.json`).
 - Audio features (interview page) require microphone and speaker access — test in a browser that supports `getUserMedia` and `AudioWorklet`.
 - The backend must be running for authentication, session management, and real-time audio streaming to work.
+
+## Candidate Consent Flow (UU PDP)
+
+Before starting the AI interview, candidates are presented with an explicit consent modal (`CandidateConsentModal`) that complies with **UU PDP No. 27/2022** (Indonesia's Personal Data Protection law).
+
+### How it works:
+
+1. **Candidate opens interview link** → `InterviewPage` fetches candidate info via `GET /sessions/:token/candidate`
+2. **If `consent_given` is `false`** → The consent modal is displayed instead of the hardware check
+3. **Candidate reads disclosures** about AI processing, voice data handling, and their rights as a data subject
+4. **Candidate checks the explicit consent checkbox** and clicks "Setuju & Lanjutkan"
+5. **Consent is recorded** via `POST /sessions/:token/consent` with `pdp_retention_acknowledged: true`
+6. **On success** → The modal is dismissed and the hardware check + interview flow begins
+
+### Key components:
+
+| File | Purpose |
+|---|---|
+| `src/components/interview/CandidateConsentModal.tsx` | Consent UI with disclosures, checkbox, and API call |
+| `src/pages/interview/InterviewPage.tsx` | Orchestrates consent → hardware check → interview flow |
+| `src/services/sessions.ts` | `recordConsent()` API method |
+| `src/types/index.ts` | `CandidateInfo` interface with consent fields |

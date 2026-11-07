@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete record_consent]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete record_consent]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -146,10 +146,44 @@ module Api
         end
 
         json_response(
-          session_id:      session.id,
-          role_title:      assessment.name,
-          time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_id:                 session.id,
+          role_title:                 assessment.name,
+          time_limit_min:             assessment.time_limit_min,
+          session_status:             session.status,
+          consent_given:              session.consent_given?,
+          consent_given_at:           session.consent_given_at,
+          consent_version:            session.consent_version,
+          pdp_retention_acknowledged: session.pdp_retention_acknowledged?
+        )
+      end
+
+      # POST /sessions/:token/consent — no JWT, candidate explicit consent under UU PDP
+      def record_consent
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+
+        if session.ended?
+          return json_error("Cannot record consent for ended session", :unprocessable_entity)
+        end
+
+        retention_ack = params[:pdp_retention_acknowledged]
+        unless [true, "true", 1, "1"].include?(retention_ack)
+          return json_error("Data retention and processing acknowledgement is required under UU PDP", :unprocessable_entity)
+        end
+
+        session.update!(
+          consent_given_at:           Time.current,
+          consent_version:            params[:consent_version].presence || "v1.0-uupdp-2022",
+          pdp_retention_acknowledged: true
+        )
+
+        json_response(
+          status:                     "consent_recorded",
+          session_id:                 session.id,
+          consent_given:              true,
+          consent_given_at:           session.consent_given_at,
+          consent_version:            session.consent_version,
+          pdp_retention_acknowledged: true
         )
       end
 
@@ -174,8 +208,12 @@ module Api
           end_reason:       session.end_reason,
           started_at:       session.started_at,
           ended_at:         session.ended_at,
-          duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          duration_seconds:           session.duration_seconds,
+          consent_given:              session.consent_given?,
+          consent_given_at:           session.consent_given_at,
+          consent_version:            session.consent_version,
+          pdp_retention_acknowledged: session.pdp_retention_acknowledged?,
+          created_at:                 session.created_at
         }
       end
 

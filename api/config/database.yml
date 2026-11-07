@@ -19,8 +19,14 @@ development:
   database: rakamin_development
 
 test:
+  <% if ENV['TEST_DB_ADAPTER'] == 'postgresql' %>
   <<: *default
   database: rakamin_test
+  <% else %>
+  adapter: sqlite3
+  database: "file:memdb1?mode=memory&cache=shared"
+  timeout: 5000
+  <% end %>
 
 staging:
   <<: *default
