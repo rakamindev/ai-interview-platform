@@ -218,7 +218,9 @@ module Portfolios
     def publish!(data)
       Portfolio.transaction do
         @portfolio.lock!
-        @generation.reload
+        # Lock the generation too: a reclaim's claim! UPDATE waits for publication to commit,
+        # then no longer matches the completed run instead of changing ownership mid-publication.
+        @generation.lock!
         next if @generation.terminal?
         next if lost_claim? # reclaimed by another worker after STALE_RUNNING_AFTER: its result wins
 
