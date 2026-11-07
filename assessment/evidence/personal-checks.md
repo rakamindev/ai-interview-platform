@@ -18,7 +18,7 @@ Farros ran the tests above before UX fix `1e29ecd`. His UI observations are repo
 
 ## Saved output tails
 
-Final two non-empty lines of each saved output, with blank lines omitted. Original filenames are local evidence references, not repository links; no local absolute paths are included.
+Result lines of each saved output, with blank lines omitted. Original filenames are local evidence references, not repository links; no local absolute paths are included.
 
 ### RSpec
 
@@ -30,6 +30,8 @@ Randomized with seed 36441
 ### Vitest
 
 ```text
+ Test Files  3 passed (3)
+      Tests  29 passed (29)
    Start at  12:48:23
    Duration  2.74s (transform 369ms, setup 0ms, collect 560ms, tests 195ms, environment 2ms, prepare 3.80s)
 ```
