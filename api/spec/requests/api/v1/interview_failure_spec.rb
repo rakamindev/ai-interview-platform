@@ -12,6 +12,11 @@ RSpec.describe 'API V1 interview failure states', type: :request do
       tenant_id: organization.id, created_by: 1, name: 'Failure', time_limit_min: 45, language: 'en'
     )
   end
+  let(:headers) do
+    token = JsonWebToken.encode(user_id: 1, role: 'admin', scheme: organization.scheme)
+    { 'Authorization' => "Bearer #{token}", 'Content-Type' => 'application/json' }
+  end
+
   def session_with(**attrs)
     Session.unscoped.create!(tenant_id: organization.id, assessment: assessment, **attrs)
   end
@@ -36,6 +41,30 @@ RSpec.describe 'API V1 interview failure states', type: :request do
 
     it 'does not flag a session that has not started' do
       expect(candidate_info(session_with)['ended_with_error']).to be(false)
+    end
+  end
+
+  describe 'POST /sessions/:id/portfolio/regenerate' do
+    before { allow(PortfolioGeneratorWorker).to receive(:perform_async) }
+
+    it 'refuses a session with no candidate answers, because retrying cannot help' do
+      session = session_with(status: 'ended', end_reason: 'manual_candidate')
+      session.create_portfolio!(generation_status: 'failed', generation_error: Portfolio::NO_CANDIDATE_ANSWERS)
+
+      post "/api/v1/sessions/#{session.id}/portfolio/regenerate", headers: headers
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(PortfolioGeneratorWorker).not_to have_received(:perform_async)
+    end
+
+    it 'still retries a portfolio that failed for another reason' do
+      session = session_with(status: 'ended', end_reason: 'manual_candidate')
+      session.create_portfolio!(generation_status: 'failed', generation_error: 'Rate limited')
+
+      post "/api/v1/sessions/#{session.id}/portfolio/regenerate", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(PortfolioGeneratorWorker).to have_received(:perform_async).with(session.id)
     end
   end
 end

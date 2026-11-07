@@ -20,6 +20,12 @@ module Portfolios
         generation_status: 'pending'
       )
 
+      unless @session.transcript_turns.where(speaker: 'candidate').exists?
+        portfolio.update!(generation_status: 'failed', generation_error: Portfolio::NO_CANDIDATE_ANSWERS)
+        Rails.logger.info("[N10] No candidate answers in session #{@session.id} — portfolio not generated")
+        return portfolio
+      end
+
       portfolio.update!(generation_status: 'generating')
 
       prompt   = build_prompt

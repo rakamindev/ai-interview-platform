@@ -12,6 +12,8 @@ import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
+const NO_CANDIDATE_ANSWERS = "no_candidate_answers";
+
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
   const navigate = useNavigate();
@@ -128,7 +130,7 @@ export default function PortfolioPage() {
             <FileText className="h-3.5 w-3.5" />
             Transcript
           </Link>
-          {!generating && portfolio && (
+          {!generating && portfolio?.generation_status === "complete" && (
             <>
               <Button
                 variant="outline"
@@ -166,8 +168,18 @@ export default function PortfolioPage() {
         </div>
       )}
 
+      {/* Nothing to assess: retrying cannot help */}
+      {!generating && portfolio?.generation_error === NO_CANDIDATE_ANSWERS && (
+        <div className="border rounded-lg p-6 text-center space-y-1">
+          <p className="text-sm font-medium">No portfolio for this session</p>
+          <p className="text-sm text-muted-foreground">
+            The candidate did not answer any questions, so there is nothing to assess.
+          </p>
+        </div>
+      )}
+
       {/* Failed state */}
-      {!generating && portfolio?.generation_status === "failed" && (
+      {!generating && portfolio?.generation_status === "failed" && portfolio.generation_error !== NO_CANDIDATE_ANSWERS && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
           <p className="text-sm text-destructive">Portfolio generation failed.</p>
           <Button
