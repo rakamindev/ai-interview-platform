@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 module Portfolios
-  # Saves an assessor's override. An override's identity is (portfolio, skill_key): one human decision
-  # per skill, however many AI generations come and go.
+  # Saves one human decision per skill identity within a portfolio. Configured skills use skill_key;
+  # discovered skills also require the same label after strip/downcase/space-squeeze.
   #
   # Runs under the same portfolio row lock as generation publication, so the two cannot interleave.
   # If the assessor was looking at a skill row that has just been replaced by a newer generation, the
-  # decision is applied to the current row with the same skill_key, never to a stale copy (which
-  # would otherwise create a second, competing override).
+  # decision is applied to the current row only when its identity matches. A missing/mismatched
+  # discovered skill keeps the decision on the submitted row, flagged for review.
   class SaveOverride
     Result = Struct.new(:override, :created, keyword_init: true)
 
@@ -57,7 +57,8 @@ module Portfolios
     def current_skill_for(portfolio, source)
       return nil if portfolio.current_generation_id.nil? || source.generation_id == portfolio.current_generation_id
 
-      portfolio.portfolio_skills.find_by(skill_key: source.skill_key)
+      portfolio.portfolio_skills.where(skill_key: source.skill_key)
+               .find { |skill| SkillIdentity.key(skill) == SkillIdentity.key(source) }
     end
 
     # Cleared only when the decision was made against the current report's own AI rating.
@@ -74,12 +75,13 @@ module Portfolios
     end
 
     # The decision to update for this skill: the one already on the target row if any (so the unique
-    # index on portfolio_skill_id is respected), otherwise the newest one for the same skill_key.
+    # index on portfolio_skill_id is respected), otherwise the newest one for the same identity.
     def override_for(portfolio, target)
       AssessorOverride.find_by(portfolio_skill_id: target.id) ||
         AssessorOverride.joins(:portfolio_skill)
                         .where(portfolio_skills: { portfolio_id: portfolio.id, skill_key: target.skill_key })
-                        .order(overridden_at: :desc, id: :desc).first
+                        .includes(:portfolio_skill).order(overridden_at: :desc, id: :desc)
+                        .find { |decision| SkillIdentity.key(decision.portfolio_skill) == SkillIdentity.key(target) }
     end
   end
 end

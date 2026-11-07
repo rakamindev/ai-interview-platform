@@ -172,7 +172,7 @@ module Api
       end
 
       def portfolio_json(portfolio)
-        current_keys = portfolio.portfolio_skills.pluck(:skill_key).to_set
+        current_identities = portfolio.portfolio_skills.map { |skill| Portfolios::SkillIdentity.key(skill) }.to_set
         {
           id:                portfolio.id,
           session_id:        portfolio.session_id,
@@ -185,7 +185,7 @@ module Api
           regenerate:         regenerate_json(portfolio),
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.includes(:portfolio_skill)
-                                      .map { |o| override_json(o, portfolio, current_keys) }
+                                      .map { |o| override_json(o, portfolio, current_identities) }
         }
       end
 
@@ -233,8 +233,8 @@ module Api
 
       # `orphaned`: the skill this decision is about is not in the current report any more. A decision
       # can sit on an older report's row and still not be orphaned (e.g. superseded by a newer
-      # decision for the same skill), so this is decided by skill_key, not by the row's generation.
-      def override_json(override, portfolio = nil, current_keys = nil)
+      # decision for the same skill), so this uses the key plus canonical label for discovered skills.
+      def override_json(override, portfolio = nil, current_identities = nil)
         {
           id:             override.id,
           portfolio_skill_id: override.portfolio_skill_id,
@@ -248,7 +248,7 @@ module Api
           first_made_on_generation_id: override.first_made_on_generation_id,
           last_decided_on_generation_id:    override.last_decided_on_generation_id,
           skill_label:    override.portfolio_skill.skill_label,
-          orphaned:       current_keys ? !current_keys.include?(override.portfolio_skill.skill_key) : false
+          orphaned:       current_identities ? !current_identities.include?(Portfolios::SkillIdentity.key(override.portfolio_skill)) : false
         }
       end
 
