@@ -90,7 +90,7 @@ module Gemini
 
     # Injects hidden context via realtimeInput.text — same channel as audio, no interleaving conflicts.
     def inject_context(text, turn_complete: true) # turn_complete kept for interface compat, ignored
-      return false unless @connected && @ws
+      return false unless @connected && @ws && !@superseded
 
       @ws.send({ realtimeInput: { text: text } }.to_json)
       true
@@ -118,16 +118,19 @@ module Gemini
       @inactivity_timer&.cancel
       @gate_timer&.cancel
       stop_silence_pump
+      flush_transcription_buffers
       @ws&.close
       @connected = false
     end
 
     # Silences callbacks before this client is replaced on GoAway reconnect, preventing event bleed.
+    # Flushes last: nothing reads this client's buffers afterwards, so unflushed words would be lost.
     def supersede!
       @superseded = true
       @inactivity_timer&.cancel
       @gate_timer&.cancel
       stop_silence_pump
+      flush_transcription_buffers
     end
 
     private
@@ -140,6 +143,7 @@ module Gemini
     def handle_ws_close(event)
       @connected = false
       Rails.logger.info("[Gemini::LiveClient] Connection closed: code=#{event.code} reason=#{event.reason} superseded=#{@superseded}")
+      flush_transcription_buffers
       # Skip on_close for superseded clients to avoid duplicate reconnect from the replaced instance.
       @on_close&.call(code: event.code, reason: event.reason) unless @superseded
     end
@@ -469,6 +473,11 @@ module Gemini
       time_left = data.dig('goAway', 'timeLeft')
       Rails.logger.warn("[Gemini::LiveClient] GoAway received, timeLeft=#{time_left}")
       @on_go_away&.call(time_left: time_left, resumption_token: @resumption_token)
+    end
+
+    def flush_transcription_buffers
+      flush_input_buffer
+      flush_output_buffer
     end
 
     def flush_input_buffer

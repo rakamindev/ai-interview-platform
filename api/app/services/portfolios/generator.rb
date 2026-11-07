@@ -8,7 +8,7 @@ module Portfolios
     def initialize(session:, gemini_client: nil)
       @session = session
       @gemini_client = gemini_client || Gemini::HttpClient.new(
-        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-2.0-pro-001'),
+        model:   ENV.fetch('GEMINI_PRO_MODEL', 'gemini-3.6-flash'),
         timeout: 180  # up to 3 minutes for large transcripts
       )
     end
@@ -19,6 +19,12 @@ module Portfolios
         candidate_id:      @session.candidate_id,
         generation_status: 'pending'
       )
+
+      unless @session.transcript_turns.where(speaker: 'candidate').exists?
+        portfolio.update!(generation_status: 'failed', generation_error: Portfolio::NO_CANDIDATE_ANSWERS)
+        Rails.logger.info("[N10] No candidate answers in session #{@session.id} — portfolio not generated")
+        return portfolio
+      end
 
       portfolio.update!(generation_status: 'generating')
 

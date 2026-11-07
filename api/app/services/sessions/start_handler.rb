@@ -8,11 +8,22 @@ module Sessions
       @session = session
     end
 
-    def call
+    # connection_id: set when acting for an audio connection, so a connection that was replaced while
+    # waiting for Gemini cannot start the interview. Only a pending session can be started.
+    def call(connection_id: nil)
+      started_now = false
+
       ActiveRecord::Base.transaction do
+        @session.lock!
+        next unless @session.pending?
+        next if connection_id && @session.active_connection_id != connection_id
+
         @session.update!(status: 'active', started_at: Time.current)
         initialize_coverage_maps
+        started_now = true
       end
+
+      return @session unless started_now
 
       publish_status_update
       Rails.logger.info("[N5/StartHandler] Session #{@session.id} activated")

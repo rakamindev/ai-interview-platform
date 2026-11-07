@@ -11,7 +11,9 @@ module Sessions
       @session = session
     end
 
-    def call(reason: 'manual_assessor')
+    # connection_id: set when acting for an audio connection. The session only ends if that connection
+    # still owns it, so a timer from a replaced connection cannot end a session that moved on.
+    def call(reason: 'manual_assessor', connection_id: nil)
       # Allow upgrading end_reason from 'error' to a manual reason (candidate/assessor ended cleanly)
       if @session.ended?
         manual = %w[manual_candidate manual_assessor]
@@ -23,7 +25,13 @@ module Sessions
 
       reason = 'manual_assessor' unless VALID_REASONS.include?(reason.to_s)
 
+      ended_now = false
+
       ActiveRecord::Base.transaction do
+        @session.lock!
+        next if @session.ended?
+        next if connection_id && @session.active_connection_id != connection_id
+
         duration = @session.started_at ? (Time.current - @session.started_at).to_i : nil
 
         @session.update!(
@@ -34,7 +42,10 @@ module Sessions
         )
 
         create_portfolio
+        ended_now = true
       end
+
+      return @session unless ended_now
 
       enqueue_portfolio_generation
       publish_status_update
@@ -59,8 +70,9 @@ module Sessions
       return if @session.portfolio.present?
 
       @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
+        candidate_id:            @session.candidate_id,
+        generation_status:       'pending',
+        generation_requested_at: Time.current
       )
     end
 

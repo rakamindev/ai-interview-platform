@@ -50,6 +50,16 @@ module Exports
 
       pdf.stroke_horizontal_rule
       pdf.move_down 10
+      render_coverage_warning(pdf) if @session.coverage_missing?
+    end
+
+    def render_coverage_warning(pdf)
+      pdf.font_size(10) do
+        pdf.text 'Coverage data is missing for this session. Levels and confidence were produced without it ' \
+                 'and may be unreliable. Check them against the transcript before relying on this report.',
+                 style: :bold, color: 'B45309'
+      end
+      pdf.move_down 10
     end
 
     def render_portfolio_section(pdf)

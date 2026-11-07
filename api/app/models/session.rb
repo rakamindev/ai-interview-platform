@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
+# Represents one candidate interview attempt and its generated invitation.
 class Session < ApplicationRecord
   include TenantScoped
 
-  STATUSES   = %w[pending active ended failed].freeze
+  STATUSES = %w[pending active ended failed].freeze
   END_REASONS = %w[manual_candidate manual_assessor all_covered time_ceiling error].freeze
 
   belongs_to :assessment
@@ -25,9 +26,27 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # Makes connection_id the only audio connection allowed to act for this session.
+  # Takes the row lock so it cannot interleave with EndHandler. Returns false if the session already ended.
+  def claim_audio_connection!(connection_id)
+    with_lock do
+      next false if ended?
+
+      update_column(:active_connection_id, connection_id)
+      true
+    end
+  end
+
+  # True when a finished result exists but coverage analysis recorded nothing, so its levels and confidence were
+  # produced without coverage data. Works on preloaded associations, so lists do not query per session.
+  def coverage_missing?
+    return false unless ended? && portfolio&.complete?
+
+    coverage_maps.none? { |map| map.probe_count.positive? }
+  end
+
   def invite_url
-    base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')
-    "#{base}/interview/#{invite_token}"
+    "#{Rails.configuration.x.web_base_url}/interview/#{invite_token}"
   end
 
   private

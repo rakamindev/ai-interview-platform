@@ -54,6 +54,14 @@ function SessionRow({
       </div>
 
       <div className="flex items-center gap-3">
+        {session.coverage_missing && (
+          <span
+            className="text-xs text-amber-700"
+            title="This result was produced without coverage data. Check it against the transcript before relying on it."
+          >
+            Coverage missing
+          </span>
+        )}
         {isPending && (
           <span className="flex items-center gap-1 text-xs text-amber-600">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
