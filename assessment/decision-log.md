@@ -30,7 +30,7 @@ A custom harness would also have added its own bugs, all code we would then need
 | Adversarial review | Independent ChatGPT review rounds on the actual diff. Each finding was reproduced as a failing test before it was fixed |
 | Evidence tracking | This log, and `assessment/evidence/` |
 | Browser verification | A manual end-to-end walkthrough in a real browser when the UI mattered |
-| Human acceptance | Farros decided direction, scope and recorded option choices; personal review/verification is limited to his ticked checklist items, currently unconfirmed |
+| Human acceptance | Farros ran the test suites and checked the UI states himself on 7 Nov; see `evidence/personal-checks.md`. |
 
 **Tools in the original phase:** Claude Code for investigation, implementation and running checks, plus its built-in browser for the walkthrough; ChatGPT for independent challenge. Codex later wrote continuation code, tests and docs and performed the recorded continuation checks. No custom MCP server, orchestration layer or local model was built for the submitted implementation.
 
