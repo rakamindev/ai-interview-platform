@@ -38,13 +38,13 @@ function SessionRow({
   const displayName = session.candidate_name || `Candidate ${index}`;
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-4 gap-3">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground">
+        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-medium text-muted-foreground shrink-0">
           {index}
         </div>
-        <div className="space-y-0.5">
-          <div className="text-sm font-medium">{displayName}</div>
+        <div className="space-y-0.5 overflow-hidden">
+          <div className="text-sm font-medium truncate max-w-[200px] sm:max-w-xs">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
               {new Date(session.started_at).toLocaleDateString()}
@@ -53,27 +53,27 @@ function SessionRow({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
         {isPending && (
-          <span className="flex items-center gap-1 text-xs text-amber-600">
+          <span className="flex items-center gap-1 text-xs text-amber-600 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Awaiting candidate
           </span>
         )}
         {isLive && (
-          <span className="flex items-center gap-1 text-xs text-primary">
+          <span className="flex items-center gap-1 text-xs text-primary shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Live
           </span>
         )}
         {isEnded && session.end_reason === "error" && (
-          <span className="flex items-center gap-1 text-xs text-destructive">
+          <span className="flex items-center gap-1 text-xs text-destructive shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
             Failed
           </span>
         )}
         {isEnded && session.end_reason !== "error" && (
-          <span className="flex items-center gap-1 text-xs text-green-600">
+          <span className="flex items-center gap-1 text-xs text-green-600 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             Completed
           </span>
@@ -199,27 +199,26 @@ export default function AssessmentInvitePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <Link to="/assessments" className="text-muted-foreground hover:text-foreground">
+    <div className="max-w-2xl mx-auto space-y-6 px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-2">
+          <Link to="/assessments" className="text-muted-foreground hover:text-foreground mt-1">
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold">{assessment?.name ?? "—"}</h1>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-              <Clock className="h-3 w-3" />
-              {assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills
+          <div className="space-y-0.5 overflow-hidden">
+            <h1 className="text-lg font-semibold truncate max-w-[280px] sm:max-w-md">{assessment?.name ?? "—"}</h1>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span>{assessment?.time_limit_min} min · {assessment?.skills?.length ?? 0} skills</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
+        <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)} className="flex-1 sm:flex-initial">
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession} className="flex-1 sm:flex-initial">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {creatingSession ? "Creating..." : "Invite Candidate"}
           </Button>
@@ -228,7 +227,7 @@ export default function AssessmentInvitePage() {
 
       {/* Invite candidate dialog */}
       <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-[90vw] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Invite Candidate</DialogTitle>
           </DialogHeader>
@@ -244,9 +243,9 @@ export default function AssessmentInvitePage() {
             />
             <p className="text-xs text-muted-foreground">Optional — helps you identify this session later.</p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
-            <Button onClick={handleInviteCandidate}>Create Link</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowInviteDialog(false)} className="w-full sm:w-auto">Cancel</Button>
+            <Button onClick={handleInviteCandidate} className="w-full sm:w-auto">Create Link</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -260,7 +259,7 @@ export default function AssessmentInvitePage() {
                 ? <>Link for <span className="font-semibold">{newSession.candidate_name}</span> ready — share with your candidate:</>
                 : <>New invite link ready — share with your candidate:</>}
             </p>
-            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-white overflow-hidden">
               <span className="flex-1 text-sm font-mono truncate text-muted-foreground">
                 {newSession.invite_url}
               </span>

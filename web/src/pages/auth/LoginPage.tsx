@@ -34,8 +34,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
+      <div className="w-full max-w-sm space-y-6 bg-card p-6 sm:p-8 rounded-xl border shadow-sm">
         <div className="text-center">
           <h1 className="text-2xl font-bold">AI Interview</h1>
           <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
@@ -73,7 +73,6 @@ export default function LoginPage() {
             Sign in
           </Button>
         </form>
-
       </div>
     </div>
   );

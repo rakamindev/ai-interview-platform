@@ -6,6 +6,7 @@ module Api
       authorize_auth_token! :assessor
 
       before_action :set_vacancy, only: %i[show update destroy]
+      before_action :process_custom_skills, only: %i[create update]
 
       # GET /api/v1/vacancies
       def index
@@ -51,6 +52,29 @@ module Api
 
       private
 
+      def process_custom_skills
+        return unless params[:vacancy].key?(:vacancy_skills_attributes)
+
+        params[:vacancy][:vacancy_skills_attributes].each do |skill_attr|
+          if skill_attr[:skill_id].blank? && skill_attr[:is_custom] == true
+            clean_label = skill_attr[:skill_label].to_s.strip.squeeze(" ")
+            next if clean_label.blank?
+
+            taxonomy = SkillTaxonomy.where("LOWER(skill_label) = ?", clean_label.downcase).first_or_create!(
+              skill_label: clean_label,
+              category: "engineering",
+              l1_anchor: "Baseline expectation for custom skill.",
+              l2_anchor: "Routine execution capability.",
+              l3_anchor: "Proficient capability in execution.",
+              l4_anchor: "Advanced mastery level.",
+              l5_anchor: "Expert leadership and guidance."
+            )
+
+            skill_attr[:skill_id] = taxonomy.skill_id
+          end
+        end
+      end
+
       def set_vacancy
         @vacancy = Vacancy.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -63,27 +87,26 @@ module Api
           :culture_dimensions,
           :competency_expectations,
           vacancy_skills_attributes: %i[
-            id skill_id skill_label expected_level _destroy
+            id skill_id skill_label expected_level is_custom _destroy # [DITAMBAHKAN] Menambahkan :is_custom ke permitted params
           ]
         )
       end
 
       def vacancy_json(vacancy)
         {
-          id:                       vacancy.id,
-          role_title:               vacancy.role_title,
-          culture_dimensions:       vacancy.culture_dimensions,
-          competency_expectations:  vacancy.competency_expectations,
-          created_by:               vacancy.created_by,
-          created_at:               vacancy.created_at,
-          updated_at:               vacancy.updated_at
+          id:                     vacancy.id,
+          role_title:             vacancy.role_title,
+          culture_dimensions:     vacancy.culture_dimensions,
+          competency_expectations: vacancy.competency_expectations,
+          created_by:             vacancy.created_by,
+          created_at:             vacancy.created_at,
+          updated_at:             vacancy.updated_at
         }
       end
 
       def vacancy_with_skills_json(vacancy)
         skills = vacancy.vacancy_skills
 
-        # Preload taxonomy anchors in one query to avoid N+1
         skill_ids    = skills.filter_map(&:skill_id).uniq
         taxonomy_map = SkillTaxonomy.where(skill_id: skill_ids).index_by(&:skill_id)
 

@@ -7,10 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import LevelRadio from "@/components/assessment/LevelRadio";
 import SkillPicker from "@/components/assessment/SkillPicker";
 import { vacanciesApi } from "@/services/vacancies";
-import { ArrowLeft, Plus, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { VacancySkill } from "@/types";
 
 interface VacancyFormValues {
@@ -26,6 +34,11 @@ export default function VacancyEditPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingData, setPendingData] = useState<VacancyFormValues | null>(null);
+
+  const [successOpen, setSuccessOpen] = useState(false);
 
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<VacancyFormValues>({
     defaultValues: { role_title: "", culture_dimensions: "", competency_expectations: "", skills: [] },
@@ -35,23 +48,45 @@ export default function VacancyEditPage() {
   useEffect(() => {
     vacanciesApi.get(Number(id)).then((res) => {
       const v = res.data.vacancy;
-      reset({ role_title: v.role_title, culture_dimensions: v.culture_dimensions, competency_expectations: v.competency_expectations, skills: v.skills });
+      reset({ 
+        role_title: v.role_title, 
+        culture_dimensions: v.culture_dimensions, 
+        competency_expectations: v.competency_expectations, 
+        skills: v.skills 
+      });
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id, reset]);
 
-  const onSubmit = async (data: VacancyFormValues) => {
+  const onSubmitClick = (data: VacancyFormValues) => {
+    setPendingData(data);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!pendingData) return;
+
     setSubmitting(true);
     try {
       await vacanciesApi.update(Number(id), {
-        role_title: data.role_title,
-        culture_dimensions: data.culture_dimensions,
-        competency_expectations: data.competency_expectations,
-        vacancy_skills_attributes: data.skills,
+        role_title: pendingData.role_title,
+        culture_dimensions: pendingData.culture_dimensions,
+        competency_expectations: pendingData.competency_expectations,
+        vacancy_skills_attributes: pendingData.skills,
       });
-      navigate("/vacancies");
+      
+      setConfirmOpen(false);
+      setSuccessOpen(true);
+    } catch (error) {
+      console.error("Gagal memperbarui vacancy:", error);
+      setConfirmOpen(false);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setSuccessOpen(false);
+    navigate("/vacancies");
   };
 
   if (loading) return <div className="max-w-2xl mx-auto space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /></div>;
@@ -63,43 +98,120 @@ export default function VacancyEditPage() {
         <span className="text-sm font-medium">Edit Vacancy</span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmitClick)} className="space-y-6">
         <div className="space-y-1.5">
           <Label>Role title <span className="text-destructive">*</span></Label>
           <Input {...register("role_title", { required: true })} />
         </div>
+
         <Separator />
+
         <div className="space-y-3">
           <Label>Expected skills</Label>
           {fields.map((field, index) => (
-            <div key={field.id} className="border rounded-lg p-3 space-y-2">
+            <div key={field.id} className="border rounded-lg p-3 space-y-2 bg-card">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{watch(`skills.${index}.skill_label`)}</span>
                 <button type="button" onClick={() => remove(index)} className="text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
               </div>
-              <LevelRadio value={watch(`skills.${index}.expected_level`) ?? 3} onChange={(v) => setValue(`skills.${index}.expected_level`, v)} />
+              <LevelRadio 
+                value={watch(`skills.${index}.expected_level`) ?? 3} 
+                onChange={(v) => setValue(`skills.${index}.expected_level`, v)} 
+              />
             </div>
           ))}
+          
           <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Add skill
           </Button>
         </div>
+
         <Separator />
+
         <div className="space-y-1.5">
           <Label>Company culture</Label>
           <Textarea rows={3} {...register("culture_dimensions")} />
         </div>
+
         <div className="space-y-1.5">
           <Label>Competency expectations</Label>
           <Textarea rows={3} {...register("competency_expectations")} />
         </div>
+
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate("/vacancies")}>Cancel</Button>
-          <Button type="submit" disabled={submitting}>{submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save Changes</Button>
+          <Button type="submit" disabled={submitting}>
+            Save Changes
+          </Button>
         </div>
       </form>
 
-      <SkillPicker open={pickerOpen} onOpenChange={setPickerOpen} onSelect={(s) => append({ skill_id: s.skill_id, skill_label: s.skill_label, expected_level: 3 })} />
+      <SkillPicker 
+        open={pickerOpen} 
+        onOpenChange={setPickerOpen} 
+        onSelect={(s) => append({ 
+          skill_id: s.skill_id, 
+          skill_label: s.skill_label, 
+          expected_level: s.expected_level ?? 3 
+        })} 
+      />
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-foreground">
+              <div className="p-2 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <DialogTitle>Konfirmasi Simpan</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              Apakah Anda yakin ingin menyimpan perubahan pada lowongan ini?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              disabled={submitting}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmSave}
+              disabled={submitting}
+            >
+              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Ya, Yakin
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader className="items-center">
+            <div className="p-3 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 mb-2">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <DialogTitle>Berhasil Disimpan!</DialogTitle>
+            <DialogDescription className="text-center pt-1">
+              Perubahan data lowongan berhasil diperbarui ke dalam sistem.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 sm:justify-center">
+            <Button
+              type="button"
+              className="w-full sm:w-auto px-6"
+              onClick={handleSuccessClose}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
