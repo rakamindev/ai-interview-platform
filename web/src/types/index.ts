@@ -164,6 +164,7 @@ export interface CandidateInfo {
   role_title: string;
   time_limit_min: number;
   session_status: string;
+  ended_with_error: boolean;
 }
 
 export interface PaginationMeta {
@@ -182,7 +183,10 @@ export type InterviewState =
   | "reconnecting"
   | "draining_audio"
   | "ending"
-  | "complete";
+  | "complete"
+  | "superseded"
+  | "start_failed"
+  | "failed";
 
 export type InterviewSpeaker = "ai" | "candidate" | null;
 
@@ -190,6 +194,8 @@ export interface WsControlMessage {
   type:
     | "session_started"
     | "session_ended"
+    | "session_superseded"
+    | "start_failed"
     | "transcript"
     | "transcription"
     | "reconnecting"
@@ -203,5 +209,6 @@ export interface WsControlMessage {
   reason?: string;
   code?: string;
   message?: string;
+  resumed?: boolean;
   recoverable?: boolean;
 }

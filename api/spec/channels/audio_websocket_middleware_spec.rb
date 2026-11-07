@@ -75,6 +75,7 @@ RSpec.describe AudioWebSocketMiddleware do
   before do
     stub_const('AudioWebSocketMiddleware::BROWSER_GRACE_PERIOD', 0.2)
     stub_const('AudioWebSocketMiddleware::OWNERSHIP_CHECK_INTERVAL', 0.05)
+    stub_const('AudioWebSocketMiddleware::START_TIMEOUT', 5)
     allow(PortfolioGeneratorWorker).to receive(:perform_async)
     allow(Gemini::LiveClient).to receive(:new) { |**callbacks| fake_gemini_class.new(callbacks) }
   end
@@ -105,7 +106,8 @@ RSpec.describe AudioWebSocketMiddleware do
     Kernel.sleep(seconds)
   end
 
-  def open_connection
+  # ready: false leaves Gemini mid-handshake, before setupComplete.
+  def open_connection(ready: true)
     middleware = described_class.new(->(_env) { [200, {}, []] })
     browser = fake_browser_class.new
     state = described_class::ConnectionState.new
@@ -113,10 +115,22 @@ RSpec.describe AudioWebSocketMiddleware do
 
     on_reactor { middleware.send(:handle_browser_open, env, session.id.to_s, browser, state) }
     conn = { middleware: middleware, browser: browser, state: state }
-    conn = { middleware: middleware, browser: browser, state: state }
-    on_reactor { state.gemini_client.callbacks[:on_ready].call }
+    gemini_ready(conn) if ready
     conn
   end
+
+  def gemini_ready(conn)
+    on_reactor { conn[:state].gemini_client.callbacks[:on_ready].call }
+  end
+
+  def exhaust_gemini_retries(conn)
+    conn[:state].reconnect_attempts = described_class::MAX_RECONNECT_ATTEMPTS
+    on_reactor do
+      conn[:middleware].send(:handle_gemini_close, conn[:browser], conn[:state], code: 1008, reason: 'rejected')
+    end
+  end
+
+  def message_types(conn) = conn[:browser].messages.map { |m| m['type'] }
 
   def disconnect_browser(conn)
     event = Struct.new(:code).new(1006)
@@ -164,6 +178,26 @@ RSpec.describe AudioWebSocketMiddleware do
 
       expect(second[:state].gemini_client.closed).to be_falsey
     end
+
+    it 'resumes from the newest token seen by the old connection, not the debounced one' do
+      first = open_connection
+      first[:state].latest_resumption_token = 'newest-token'
+      disconnect_browser(first)
+
+      second = open_connection
+
+      expect(second[:state].gemini_client.connected_with).to eq('newest-token')
+    end
+
+    it 'tells the browser that the session was resumed' do
+      first = open_connection
+      first[:state].latest_resumption_token = 'newest-token'
+      disconnect_browser(first)
+      second = open_connection
+
+      started = second[:browser].messages.find { |m| m['type'] == 'session_started' }
+      expect(started['resumed']).to be(true)
+    end
   end
 
   describe 'two live tabs' do
@@ -185,6 +219,18 @@ RSpec.describe AudioWebSocketMiddleware do
       elapse(0.4)
 
       expect(reloaded_session).to be_active
+    end
+
+    it 'ignores a late token from the replaced connection' do
+      first = open_connection
+      second = open_connection
+      second[:state].latest_resumption_token = 'owner-token'
+      on_reactor { second[:middleware].send(:persist_resumption_token, second[:state]) }
+
+      first[:state].latest_resumption_token = 'stale-token'
+      on_reactor { first[:middleware].send(:persist_resumption_token, first[:state]) }
+
+      expect(reloaded_session.gemini_resumption_token).to eq('owner-token')
     end
   end
 
@@ -211,6 +257,176 @@ RSpec.describe AudioWebSocketMiddleware do
       end
 
       expect(reloaded_session).to be_active
+    end
+  end
+
+  describe 'failure before the interview starts (T2)' do
+    it 'does not start the interview until Gemini is ready' do
+      open_connection(ready: false)
+
+      expect(reloaded_session).to be_pending
+      expect(reloaded_session.started_at).to be_nil
+    end
+
+    it 'starts the interview once Gemini is ready' do
+      conn = open_connection(ready: false)
+      assessment.assessment_skills.create!(
+        skill_label: 'Testing', display_order: 1,
+        l1_anchor: 'a', l2_anchor: 'b', l3_anchor: 'c', l4_anchor: 'd', l5_anchor: 'e'
+      )
+      gemini_ready(conn)
+
+      expect(reloaded_session).to be_active
+      expect(reloaded_session.started_at).to be_present
+      expect(reloaded_session.coverage_maps.count).to eq(1)
+      expect(message_types(conn)).to include('session_started')
+    end
+
+    it 'keeps the invitation usable when Gemini keeps rejecting the handshake' do
+      conn = open_connection(ready: false)
+
+      exhaust_gemini_retries(conn)
+
+      expect(reloaded_session).to be_pending
+      expect(reloaded_session.portfolio).to be_nil
+      expect(PortfolioGeneratorWorker).not_to have_received(:perform_async)
+      expect(message_types(conn)).to include('start_failed')
+      expect(message_types(conn)).not_to include('session_ended')
+    end
+
+    it 'closes Gemini and the browser after a failed start' do
+      conn = open_connection(ready: false)
+
+      exhaust_gemini_retries(conn)
+      wait_until { conn[:browser].closed }
+
+      expect(conn[:state].gemini_client.closed).to be(true)
+    end
+
+    it 'lets the candidate retry with the same invitation after a failed start' do
+      exhaust_gemini_retries(open_connection(ready: false))
+
+      retry_conn = open_connection
+
+      expect(reloaded_session).to be_active
+      expect(message_types(retry_conn)).to include('session_started')
+    end
+
+    it 'treats a retry that succeeds as the start of the interview, with the AI opening' do
+      stub_const('AudioWebSocketMiddleware::RECONNECT_BACKOFF', [0.01].freeze)
+      conn = open_connection(ready: false)
+      first_client = conn[:state].gemini_client
+
+      on_reactor do
+        conn[:middleware].send(:handle_gemini_close, conn[:browser], conn[:state], code: 1011, reason: 'transient')
+      end
+      wait_until { !conn[:state].gemini_client.equal?(first_client) }
+      gemini_ready(conn)
+
+      expect(reloaded_session).to be_active
+      expect(message_types(conn)).to include('session_started')
+      expect(message_types(conn)).not_to include('reconnecting', 'reconnected')
+    end
+
+    it 'does not burn the invitation when the candidate leaves before the interview starts' do
+      conn = open_connection(ready: false)
+
+      disconnect_browser(conn)
+      elapse(0.4)
+
+      expect(reloaded_session).to be_pending
+      expect(conn[:state].gemini_client.closed).to be(true)
+    end
+
+    it 'gives up when Gemini never answers the handshake' do
+      stub_const('AudioWebSocketMiddleware::START_TIMEOUT', 0.05)
+      conn = open_connection(ready: false)
+
+      wait_until { conn[:browser].closed }
+
+      expect(message_types(conn)).to include('start_failed')
+      expect(reloaded_session).to be_pending
+    end
+
+    it 'does not apply the start timeout once the interview has started' do
+      stub_const('AudioWebSocketMiddleware::START_TIMEOUT', 0.05)
+      conn = open_connection
+
+      elapse(0.2)
+
+      expect(message_types(conn)).not_to include('start_failed')
+      expect(reloaded_session).to be_active
+    end
+
+    it 'does not let a replaced connection start the interview' do
+      first = open_connection(ready: false)
+      open_connection(ready: false)
+
+      gemini_ready(first)
+
+      expect(reloaded_session).to be_pending
+      expect(message_types(first)).not_to include('session_started')
+    end
+  end
+
+  describe 'failure after the interview started (T3)' do
+    it 'ends the session and reports the error as an error' do
+      conn = open_connection
+
+      exhaust_gemini_retries(conn)
+
+      expect(reloaded_session.end_reason).to eq('error')
+      ended = conn[:browser].messages.find { |m| m['type'] == 'session_ended' }
+      expect(ended['reason']).to eq('error')
+      expect(message_types(conn)).not_to include('start_failed')
+    end
+
+    it 'does not treat a failed browser reconnect into a running interview as a failed start' do
+      first = open_connection
+      disconnect_browser(first)
+      second = open_connection(ready: false)
+
+      exhaust_gemini_retries(second)
+
+      expect(reloaded_session.end_reason).to eq('error')
+      expect(message_types(second)).to include('session_ended')
+    end
+
+    it 'tells a browser returning to an ended session how it really ended' do
+      first = open_connection
+      Sessions::EndHandler.new(reloaded_session).call(reason: 'error')
+      wait_until { first[:browser].closed }
+
+      conn = open_connection(ready: false)
+
+      ended = conn[:browser].messages.find { |m| m['type'] == 'session_ended' }
+      expect(ended['reason']).to eq('error')
+      expect(conn[:browser].closed).to be(true)
+    end
+  end
+
+  describe 'transcript writes during a takeover' do
+    it 'keeps both turns when two connections pick the same turn number' do
+      middleware = described_class.new(->(_env) { [200, {}, []] })
+      session
+
+      middleware.send(:save_transcript_turn, session, 5, 'ai', 'flushed by the old connection')
+      saved = middleware.send(:save_transcript_turn, session, 5, 'candidate', 'said on the new connection')
+
+      expect(session.transcript_turns.reload.map(&:text)).to contain_exactly(
+        'flushed by the old connection', 'said on the new connection'
+      )
+      expect(saved).to eq(6)
+    end
+
+    it 'stays idempotent when the same turn is saved twice' do
+      middleware = described_class.new(->(_env) { [200, {}, []] })
+      session
+
+      middleware.send(:save_transcript_turn, session, 5, 'ai', 'same text')
+      middleware.send(:save_transcript_turn, session, 5, 'ai', 'same text')
+
+      expect(session.transcript_turns.reload.count).to eq(1)
     end
   end
 end

@@ -12,7 +12,10 @@ interface UseAudioWebSocketOptions {
   onReconnected?: () => void;
 }
 
+// The server keeps the session for 2 minutes after a disconnect, so giving up earlier would throw away
+// a session that can still be saved. Retries stop when the server says the session ended or was replaced.
 const RECONNECT_DELAYS = [1000, 2000, 4000];
+const MAX_RECONNECT_DELAY = 5000;
 
 export function useAudioWebSocket({
   sessionId,
@@ -32,7 +35,8 @@ export function useAudioWebSocket({
   );
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    const readyState = wsRef.current?.readyState;
+    if (readyState === WebSocket.OPEN || readyState === WebSocket.CONNECTING) return;
 
     sessionEndedRef.current = false;
     setConnectionState("connecting");
@@ -66,6 +70,7 @@ export function useAudioWebSocket({
           switch (msg.type) {
             case "session_started":
               onStateChange("active");
+              if (msg.resumed) onReconnected?.();
               break;
             case "transcription":
             case "transcript":
@@ -98,12 +103,23 @@ export function useAudioWebSocket({
               onReconnected?.();
               break;
             case "session_ended":
-              sessionEndedRef.current = true;
-              reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // suppress reconnect
-              onStateChange("complete");
+              sessionEndedRef.current = true; // suppress reconnect
+              onStateChange(msg.reason === "error" ? "failed" : "complete");
+              break;
+            case "start_failed":
+              sessionEndedRef.current = true; // the candidate decides when to try again
+              ws.close(); // free the socket now so "Try again" does not wait for the server to close it
+              onStateChange("start_failed");
+              break;
+            case "session_superseded":
+              sessionEndedRef.current = true; // reconnecting here would take the session back from the other tab
+              onStateChange("superseded");
               break;
             case "error":
-              if (!msg.recoverable) onStateChange("complete");
+              if (!msg.recoverable) {
+                sessionEndedRef.current = true; // suppress reconnect
+                onStateChange("failed");
+              }
               break;
           }
         } catch {
@@ -117,18 +133,15 @@ export function useAudioWebSocket({
     };
 
     ws.onclose = () => {
+      if (wsRef.current !== ws) return; // a newer socket took over; this one must not schedule a reconnect
       setConnectionState("disconnected");
       if (sessionEndedRef.current) return; // session ended cleanly — do not reconnect
       const attempt = reconnectAttemptsRef.current;
-      if (attempt < RECONNECT_DELAYS.length) {
-        onStateChange("reconnecting");
-        reconnectTimerRef.current = setTimeout(() => {
-          reconnectAttemptsRef.current += 1;
-          connect();
-        }, RECONNECT_DELAYS[attempt]);
-      } else {
-        onStateChange("complete");
-      }
+      onStateChange("reconnecting");
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectAttemptsRef.current += 1;
+        connect();
+      }, RECONNECT_DELAYS[attempt] ?? MAX_RECONNECT_DELAY);
     };
   }, [sessionId, token, onAudioChunk, onTranscript, onStateChange, onSpeakerChange]);
 
@@ -146,13 +159,14 @@ export function useAudioWebSocket({
 
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    reconnectAttemptsRef.current = RECONNECT_DELAYS.length; // prevent reconnect
+    sessionEndedRef.current = true; // prevent reconnect
     wsRef.current?.close();
   }, []);
 
   useEffect(() => {
     return () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      sessionEndedRef.current = true; // an unmounted page must not reconnect
       wsRef.current?.close();
     };
   }, []);

@@ -46,16 +46,23 @@ export default function InterviewPage() {
       .then((res) => {
         setCandidateInfo(res.data);
         setSessionId(res.data.session_id);
-        if (res.data.session_status === "ended") setInterviewState("complete");
+        if (res.data.session_status === "ended") {
+          setInterviewState(res.data.ended_with_error ? "failed" : "complete");
+        }
       })
-      .catch(() => setInterviewState("complete"));
+      .catch(() => setInterviewState("failed"));
   }, [token]);
 
   const muteRef = useRef<(() => void) | null>(null);
   const unmuteRef = useRef<(() => void) | null>(null);
+  const stopMediaRef = useRef<(() => void) | null>(null);
 
   const handleStateChange = useCallback((state: InterviewState) => {
     setInterviewState(state);
+
+    if (state === "superseded" || state === "start_failed" || state === "failed") {
+      stopMediaRef.current?.();
+    }
 
     if (state === "draining_audio") {
       // Mute mic, stop sending — wait for audio queue to drain then call audio_complete
@@ -71,9 +78,12 @@ export default function InterviewPage() {
 
     if (state === "reconnecting") {
       muteRef.current?.();
-      connectionLostTimerRef.current = setTimeout(() => {
-        setConnectionLostLong(true);
-      }, 60_000);
+      // Every retry reports "reconnecting" again; keep the first timer so it measures the whole outage.
+      if (!connectionLostTimerRef.current) {
+        connectionLostTimerRef.current = setTimeout(() => {
+          setConnectionLostLong(true);
+        }, 60_000);
+      }
     } else {
       if (connectionLostTimerRef.current) {
         clearTimeout(connectionLostTimerRef.current);
@@ -146,6 +156,10 @@ export default function InterviewPage() {
 
   muteRef.current = mute;
   unmuteRef.current = unmute;
+  stopMediaRef.current = () => {
+    stopCapture();
+    stopPlayback();
+  };
 
   const toggleMic = useCallback(() => {
     if (micMutedRef.current) {
@@ -236,6 +250,47 @@ export default function InterviewPage() {
           Thank you. The interview has been recorded.
           <br />
           The hiring team will review your results and follow up with you.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State H: Could not start — the invitation is still valid ────────────
+  if (interviewState === "start_failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-xl font-semibold">We couldn't start your interview</h2>
+        <p className="text-sm text-muted-foreground">
+          This is a problem on our side. Nothing has been recorded and your invitation is still valid.
+          <br />
+          Please try again in a moment, or contact the interviewer if this keeps happening.
+        </p>
+        <Button onClick={startInterview}>Try again</Button>
+      </div>
+    );
+  }
+
+  // ── State I: Failed — must never look like a successful interview ───────
+  if (interviewState === "failed") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-xl font-semibold">This interview could not be completed</h2>
+        <p className="text-sm text-muted-foreground">
+          Something went wrong and your answers may not have been fully recorded.
+          <br />
+          Please contact the interviewer who sent you this link.
+        </p>
+      </div>
+    );
+  }
+
+  // ── State G: Continued in another tab ───────────────────────────────────
+  if (interviewState === "superseded") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-xl font-semibold">Interview continued elsewhere</h2>
+        <p className="text-sm text-muted-foreground">
+          This interview is now open in another tab or window. Please continue there and close this page.
         </p>
       </div>
     );

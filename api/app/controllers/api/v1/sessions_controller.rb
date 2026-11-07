@@ -149,7 +149,8 @@ module Api
           session_id:      session.id,
           role_title:      assessment.name,
           time_limit_min:  assessment.time_limit_min,
-          session_status:  session.status
+          session_status:  session.status,
+          ended_with_error: session.ended? && session.end_reason == 'error'
         )
       end
 
