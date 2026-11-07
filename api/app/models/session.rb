@@ -20,10 +20,13 @@ class Session < ApplicationRecord
   scope :active,  -> { where(status: 'active') }
   scope :pending, -> { where(status: 'pending') }
   scope :ended,   -> { where(status: 'ended') }
+  scope :with_consent, -> { where.not(consent_given_at: nil).where(pdp_retention_acknowledged: true) }
+  scope :pending_consent, -> { where(consent_given_at: nil) }
 
   def active?  = status == 'active'
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
+  def consent_given? = consent_given_at.present? && pdp_retention_acknowledged?
 
   def invite_url
     base = ENV.fetch('APP_BASE_URL', 'http://localhost:3001')

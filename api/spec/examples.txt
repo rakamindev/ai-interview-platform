@@ -1,0 +1,16 @@
+example_id                                                                                                                     | status | run_time        |
+------------------------------------------------------------------------------------------------------------------------------ | ------ | --------------- |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/assessor_override_spec.rb[1:1:1]         | passed | 0.00966 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/assessor_override_spec.rb[1:1:2]         | passed | 0.00095 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/assessor_override_spec.rb[1:1:3]         | passed | 0.40146 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/assessor_override_spec.rb[1:1:4]         | passed | 0.0009 seconds  |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/session_spec.rb[1:1:1]                   | passed | 0.00036 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/session_spec.rb[1:1:2]                   | passed | 0.00054 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/session_spec.rb[1:1:3]                   | passed | 0.00062 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/models/session_spec.rb[1:2:1]                   | passed | 0.00083 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/requests/api/v1/sessions_consent_spec.rb[1:1:1] | passed | 0.01668 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/requests/api/v1/sessions_consent_spec.rb[1:1:2] | passed | 0.01604 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/requests/api/v1/sessions_consent_spec.rb[1:2:1] | passed | 0.01835 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/requests/api/v1/sessions_consent_spec.rb[1:2:2] | passed | 0.07275 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/requests/api/v1/sessions_consent_spec.rb[1:2:3] | passed | 0.01608 seconds |
+E:/SAN/TUGAS/Karya Website/Case Study (Rakamin)/ai-interview-platform/api/spec/requests/api/v1/sessions_consent_spec.rb[1:2:4] | passed | 0.01356 seconds |
