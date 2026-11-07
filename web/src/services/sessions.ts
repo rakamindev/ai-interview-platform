@@ -1,5 +1,5 @@
 import api from "./api";
-import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo } from "@/types";
+import type { Session, CoverageMap, TranscriptTurn, Portfolio, CandidateInfo, ReadinessReport, ReadinessCheckRecord } from "@/types";
 
 export const sessionsApi = {
   get: (id: number) =>
@@ -31,4 +31,8 @@ export const sessionsApi = {
 
   audioComplete: (token: string) =>
     api.post<{ ended: boolean; message: string }>(`/sessions/${token}/audio_complete`),
+
+  // Fire-and-forget from the candidate page: short timeout, callers must not block on it.
+  submitReadiness: (token: string, readiness: ReadinessReport) =>
+    api.post<{ readiness_check: ReadinessCheckRecord }>(`/sessions/${token}/readiness`, { readiness }, { timeout: 5_000 }),
 };
