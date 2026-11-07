@@ -8,48 +8,38 @@ module Api
       before_action :set_portfolio_skill
 
       # POST /api/v1/portfolio-skills/:id/override
+      # Validation, persistence and history live in Overrides::Apply
+      # so they happen in one transaction.
       def override
-        existing = @portfolio_skill.assessor_override
+        result = Overrides::Apply.new(
+          portfolio_skill: @portfolio_skill,
+          level:           override_params[:override_level],
+          reason:          override_params[:assessor_notes],
+          actor_id:        current_user.id
+        ).call
 
-        if existing
-          if existing.update(override_params.merge(overridden_by: current_user.id, overridden_at: Time.current))
-            regenerate_stale_fitgap_reports
-            json_response(override: override_json(existing))
-          else
-            json_error(existing.errors.full_messages.first, :unprocessable_entity)
-          end
-        else
-          new_override = @portfolio_skill.build_assessor_override(
-            override_params.merge(
-              ai_level:      @portfolio_skill.ai_level,
-              overridden_by: current_user.id,
-              overridden_at: Time.current
-            )
-          )
+        return json_error(result.error, result.status) unless result.success?
 
-          if new_override.save
-            regenerate_stale_fitgap_reports
-            json_response({ override: override_json(new_override) }, :created)
-          else
-            json_error(new_override.errors.full_messages.first, :unprocessable_entity)
-          end
-        end
+        regenerate_stale_fitgap_reports
+        json_response(
+          { override: override_json(result.override), event: OverrideEventSerializer.call(result.event) },
+          result.created ? :created : :ok
+        )
       end
 
       private
 
+      # Reports are marked stale and refreshed in the background instead of deleted.
+      # The worker is idempotent, so repeated overrides do not duplicate work.
       def regenerate_stale_fitgap_reports
-        portfolio = @portfolio_skill.portfolio
-        FitGapReport.where(portfolio_id: portfolio.id).each do |report|
-          vacancy_id = report.vacancy_id
-          report.destroy
-          FitGapGeneratorWorker.perform_async(portfolio.id, vacancy_id)
+        FitGapReport.where(portfolio_id: @portfolio_skill.portfolio_id).find_each do |report|
+          report.request_regeneration!(force: true)
         end
       end
 
       def set_portfolio_skill
-        @portfolio_skill = PortfolioSkill.joins(:portfolio)
-                                         .find(params[:id])
+        # Only skills of the current organisation; anything else is a 404.
+        @portfolio_skill = PortfolioSkill.for_tenant(current_tenant_id).find(params[:id])
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio skill not found", :not_found)
       end

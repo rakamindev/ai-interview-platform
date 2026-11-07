@@ -10,7 +10,7 @@ import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
 import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
-import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
+import type { Portfolio, AssessorOverride, OverrideEvent, Vacancy } from "@/types";
 
 export default function PortfolioPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId: string }>();
@@ -23,6 +23,8 @@ export default function PortfolioPage() {
   const [selectedVacancy, setSelectedVacancy] = useState<string>("");
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [candidateName, setCandidateName] = useState<string | null>(null);
+  // Partial state: the portfolio still renders if vacancies fail to load.
+  const [vacanciesError, setVacanciesError] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
@@ -41,21 +43,39 @@ export default function PortfolioPage() {
     }
   }, [sessionId]);
 
+  const loadVacancies = useCallback(async () => {
+    try {
+      const res = await vacanciesApi.list();
+      setVacancies(res.data.vacancies);
+      setVacanciesError(false);
+    } catch {
+      setVacanciesError(true);
+    }
+  }, []);
+
   useEffect(() => {
-    Promise.all([fetchPortfolio(), vacanciesApi.list(), sessionsApi.get(Number(sessionId))])
-      .then(([, vRes, sRes]) => {
-        setVacancies(vRes.data.vacancies);
-        setCandidateName(sRes.data.session.candidate_name ?? null);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [fetchPortfolio, sessionId]);
+    // allSettled: one failing request does not hide the rest of the page.
+    Promise.allSettled([
+      fetchPortfolio(),
+      loadVacancies(),
+      sessionsApi.get(Number(sessionId)).then((sRes) => setCandidateName(sRes.data.session.candidate_name ?? null)),
+    ]).finally(() => setLoading(false));
+  }, [fetchPortfolio, loadVacancies, sessionId]);
 
   // Poll while generating
   usePolling(fetchPortfolio, 5000, generating);
 
-  const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
+  // Update the current override and prepend the history entry without a reload.
+  const handleOverrideSaved = (skillId: number, override: AssessorOverride, event: OverrideEvent) => {
     setOverrides((prev) => ({ ...prev, [skillId]: override }));
+    setPortfolio((prev) =>
+      prev && {
+        ...prev,
+        skills: prev.skills.map((s) =>
+          s.id === skillId ? { ...s, override_history: [event, ...(s.override_history ?? [])] } : s
+        ),
+      }
+    );
   };
 
   const handleRunFitGap = () => {
@@ -107,9 +127,9 @@ export default function PortfolioPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground">
+          <Link to={`/assessments/${id}/invite`} className="text-muted-foreground hover:text-foreground" aria-label="Back to candidates">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
@@ -120,7 +140,7 @@ export default function PortfolioPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             to={`/assessments/${id}/sessions/${sessionId}/transcript`}
             className="inline-flex items-center gap-1 text-sm border rounded-md px-3 py-1.5 hover:bg-accent transition-colors"
@@ -196,7 +216,7 @@ export default function PortfolioPage() {
                   key={skill.id}
                   skill={skill}
                   override={overrides[skill.id]}
-                  onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                  onOverrideSaved={(o, e) => handleOverrideSaved(skill.id, o, e)}
                 />
               ))}
           </div>
@@ -222,7 +242,7 @@ export default function PortfolioPage() {
                       key={skill.id}
                       skill={skill}
                       override={overrides[skill.id]}
-                      onOverrideSaved={(o) => handleOverrideSaved(skill.id, o)}
+                      onOverrideSaved={(o, e) => handleOverrideSaved(skill.id, o, e)}
                     />
                   ))}
               </div>
@@ -232,9 +252,26 @@ export default function PortfolioPage() {
           <Separator />
 
           {/* Fit/Gap */}
-          <div className="flex items-center gap-3">
-            <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
-              <SelectTrigger className="w-56">
+          {vacanciesError && (
+            <div role="alert" className="flex flex-wrap items-center justify-between gap-2 text-sm border border-amber-200 bg-amber-50 text-amber-900 rounded-lg px-3 py-2">
+              <span>Vacancies could not be loaded. The portfolio above is complete.</span>
+              <Button variant="outline" size="sm" onClick={loadVacancies}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden /> Try again
+              </Button>
+            </div>
+          )}
+          {!vacanciesError && vacancies.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No vacancies yet.{" "}
+              <Link to="/vacancies/new" className="underline underline-offset-2 hover:text-foreground">
+                Create a vacancy
+              </Link>{" "}
+              with the same skills to compare this candidate.
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={selectedVacancy} onValueChange={setSelectedVacancy} disabled={vacancies.length === 0}>
+              <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Choose vacancy..." />
               </SelectTrigger>
               <SelectContent>

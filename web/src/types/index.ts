@@ -94,6 +94,20 @@ export interface PortfolioSkill {
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
   competency_summary: string;
+  /** Assessor correction history, newest first. */
+  override_history?: OverrideEvent[];
+}
+
+export interface OverrideEvent {
+  id: number;
+  previous_level: number;
+  new_level: number;
+  ai_level: number;
+  /** null for legacy corrections made before reasons were required. */
+  reason: string | null;
+  actor_id: number;
+  legacy: boolean;
+  created_at: string;
 }
 
 export interface AssessorOverride {
@@ -129,11 +143,17 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
-  required_level: number;
-  candidate_level?: number;
-  result: SkillComparisonResult;
-  delta?: number;
+  /** Level required by the vacancy. */
+  required_level?: number;
+  /** Older field name from the API; used as a fallback for old reports. */
+  expected_level?: number;
+  candidate_level?: number | null;
+  /** Original AI level before an assessor correction. */
+  ai_level?: number | null;
   is_override?: boolean;
+  override_reason?: string | null;
+  result: SkillComparisonResult;
+  delta?: number | null;
 }
 
 export interface FitGapReport {
@@ -144,6 +164,10 @@ export interface FitGapReport {
   culture_narrative: string;
   overall_narrative: string;
   generated_at: string;
+  /** The report is being refreshed after a correction; the old version is shown. */
+  stale?: boolean;
+  /** Generic message when the last refresh failed. */
+  generation_error?: string | null;
 }
 
 export interface SkillTaxonomy {

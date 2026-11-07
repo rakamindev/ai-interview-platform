@@ -1,0 +1,93 @@
+name: CI
+
+# Run on every push so forks get CI too; PRs from forks to upstream usually
+# wait for maintainer approval before Actions run.
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (RSpec)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      REDIS_URL: redis://localhost:6379/1
+      # Required at boot: config/initializers/cors.rb calls ENV.fetch('ALLOWED_ORIGINS').
+      ALLOWED_ORIGINS: http://localhost:5173
+      # Dummy values for CI: specs never call Gemini (it is stubbed).
+      GEMINI_API_KEY: ci-dummy-key
+      GEMINI_LIVE_MODEL: ci-dummy-live
+      GEMINI_FLASH_MODEL: ci-dummy-flash
+      GEMINI_PRO_MODEL: ci-dummy-pro
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          working-directory: api
+          bundler-cache: true
+
+      - name: Generate throwaway SECRET_KEY_BASE
+        run: echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> "$GITHUB_ENV"
+
+      # bin/rails is committed without the executable bit (100644), so use bundle exec.
+      - name: Prepare test database
+        run: bundle exec rails db:create db:schema:load
+
+      - name: Run RSpec
+        run: bundle exec rspec --format progress
+
+  web:
+    name: Web (typecheck, build, Vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck + build
+        run: npm run build
+
+      - name: Run Vitest with coverage
+        run: npm run test:coverage

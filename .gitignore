@@ -15,5 +15,9 @@ api/storage/
 web/dist/
 web/.vite/
 
+# Test coverage reports
+web/coverage/
+api/coverage/
+
 # OS
 .DS_Store

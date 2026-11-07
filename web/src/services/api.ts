@@ -6,8 +6,13 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL ?? "ws://localhost:3000";
 
 export const WS_URL = WS_BASE_URL;
 
+// Without a timeout a stuck request hangs forever and the UI stays in a
+// loading state. 30s covers the slowest request (PDF export).
+export const REQUEST_TIMEOUT_MS = 30_000;
+
 export const api = axios.create({
   baseURL: BASE_URL,
+  timeout: REQUEST_TIMEOUT_MS,
   headers: { "Content-Type": "application/json" },
 });
 

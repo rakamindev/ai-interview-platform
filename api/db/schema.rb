@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_06_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -56,6 +56,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.check_constraint "time_limit_min = ANY (ARRAY[10, 30, 45, 60, 90])", name: "chk_assessments_time_limit"
   end
 
+  create_table "assessor_override_events", force: :cascade do |t|
+    t.bigint "portfolio_skill_id", null: false
+    t.integer "previous_level", null: false
+    t.integer "new_level", null: false
+    t.integer "ai_level", null: false
+    t.text "reason"
+    t.bigint "actor_id", null: false
+    t.boolean "legacy", default: false, null: false
+    t.datetime "created_at", default: -> { "now()" }, null: false
+    t.index ["portfolio_skill_id", "created_at"], name: "idx_override_events_skill_created"
+    t.check_constraint "previous_level >= 1 AND previous_level <= 5 AND new_level >= 1 AND new_level <= 5 AND ai_level >= 1 AND ai_level <= 5", name: "chk_override_events_levels"
+  end
+
   create_table "assessor_overrides", force: :cascade do |t|
     t.bigint "portfolio_skill_id", null: false
     t.integer "ai_level", null: false
@@ -89,6 +102,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
     t.text "culture_narrative"
     t.text "overall_narrative"
     t.datetime "generated_at", default: -> { "now()" }
+    t.boolean "stale", default: false, null: false
+    t.text "generation_error"
+    t.datetime "based_on_override_at"
+    t.datetime "regeneration_requested_at"
     t.index ["portfolio_id", "vacancy_id"], name: "index_fit_gap_reports_on_portfolio_id_and_vacancy_id", unique: true
     t.index ["portfolio_id"], name: "index_fit_gap_reports_on_portfolio_id"
     t.index ["vacancy_id"], name: "index_fit_gap_reports_on_vacancy_id"
@@ -206,6 +223,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_05_000002) do
   end
 
   add_foreign_key "assessment_skills", "assessments"
+  add_foreign_key "assessor_override_events", "portfolio_skills", on_delete: :cascade
   add_foreign_key "assessor_overrides", "portfolio_skills"
   add_foreign_key "coverage_maps", "sessions"
   add_foreign_key "fit_gap_reports", "portfolios"
