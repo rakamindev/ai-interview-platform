@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessmentsApi } from "@/services/assessments";
+import { ReadinessBadge } from "@/components/assessment/ReadinessBadge";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
@@ -50,6 +51,7 @@ function SessionRow({
               {new Date(session.started_at).toLocaleDateString()}
             </div>
           )}
+          <ReadinessBadge readiness={session.readiness_check} />
         </div>
       </div>
 

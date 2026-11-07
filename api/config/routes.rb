@@ -10,11 +10,12 @@ Rails.application.routes.draw do
       # Health check
       get  'health', to: proc { [200, {}, [{ status: 'ok' }.to_json]] }
 
-      # Upload speed test — accepts any payload, discards it, returns bytes received
-      post 'speed_test', to: proc { |env|
-        bytes = env['CONTENT_LENGTH'].to_i
-        [200, { 'Content-Type' => 'application/json' }, [{ received_bytes: bytes }.to_json]]
-      }
+      # Connectivity probes for the candidate readiness check (no JWT, no tenant)
+      get  'connectivity/ping',     to: 'connectivity#ping'
+      get  'connectivity/download', to: 'connectivity#download'
+      post 'connectivity/upload',   to: 'connectivity#upload'
+      # Legacy path kept for existing VITE_SPEED_TEST_UPLOAD_URL configs; same capped behaviour
+      post 'speed_test', to: 'connectivity#upload'
 
       # Assessments
       resources :assessments do
@@ -35,6 +36,7 @@ Rails.application.routes.draw do
       # Candidate-facing (no JWT — invite token only)
       get  'sessions/:token/candidate',      to: 'sessions#candidate_info'
       post 'sessions/:token/audio_complete', to: 'sessions#audio_complete'
+      post 'sessions/:token/readiness',      to: 'sessions#readiness'
 
       # Portfolio skills overrides
       resources :portfolio_skills, only: [] do

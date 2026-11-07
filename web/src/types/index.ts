@@ -44,7 +44,32 @@ export interface Session {
   started_at?: string;
   ended_at?: string;
   duration_seconds?: number;
+  readiness_check?: ReadinessCheckRecord | null;
   created_at?: string;
+}
+
+/** State of one readiness check, as reported by the candidate's browser. */
+export type ReadinessCheckState = "passed" | "warn" | "failed" | "unknown" | "skipped";
+
+/** What the candidate page sends to POST /sessions/:token/readiness. */
+export interface ReadinessReport {
+  verdict: "pass" | "warn" | "fail";
+  network: { download_mbps: number | null; upload_mbps: number | null; latency_ms: number | null };
+  checks: { browser: ReadinessCheckState; network: ReadinessCheckState; microphone: ReadinessCheckState; audio_output: ReadinessCheckState };
+  client: { browser: string; os: string };
+}
+
+/** What the API stores on Session#readiness_check (sanitised server-side). */
+export interface ReadinessCheckRecord {
+  verdict: "pass" | "warn" | "fail";
+  download_mbps: number | null;
+  upload_mbps: number | null;
+  latency_ms: number | null;
+  checks: Partial<Record<keyof ReadinessReport["checks"], ReadinessCheckState>>;
+  browser: string | null;
+  os: string | null;
+  attempts: number;
+  checked_at: string;
 }
 
 export interface CoverageSkill {

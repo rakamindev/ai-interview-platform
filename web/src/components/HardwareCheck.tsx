@@ -1,291 +1,374 @@
 import React, { useEffect, useRef, useState } from "react";
-import { testInternetSpeed, DEFAULT_THRESHOLDS, type InternetSpeedResult } from "@/utils/internetSpeedTest";
-import {
-    ProctoringState,
-    type HardwareCheckingProgress,
-    getBrowserInfo,
-    getOSInfo,
-    checkCamera,
-    getCurrentTime,
-} from "@/utils/hardwareUtils";
+import { AlertTriangle, CheckCircle, Circle, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle, XCircle, Loader2, Circle } from "lucide-react";
-
-interface HardwareCheckProps {
-    onStart?: () => void;
-}
-
-function StateIcon({ state }: { state: ProctoringState }) {
-    if (state === ProctoringState.LOADING)
-        return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
-    if (state === ProctoringState.PASSED)
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-    if (state === ProctoringState.ERROR)
-        return <XCircle className="h-4 w-4 text-destructive" />;
-    return <Circle className="h-4 w-4 text-muted-foreground/40" />;
-}
-
-function stateLabel(state: ProctoringState) {
-    if (state === ProctoringState.LOADING) return "Checking...";
-    if (state === ProctoringState.PASSED) return "Passed";
-    if (state === ProctoringState.ERROR) return "Failed";
-    return "Waiting";
-}
+import { API_BASE_URL } from "@/services/api";
+import type { ReadinessCheckState, ReadinessReport } from "@/types";
+import { ProctoringState, checkCamera, getBrowserInfo, getOSInfo } from "@/utils/hardwareUtils";
+import { THRESHOLDS, assessNetwork, measureNetwork, type NetworkAssessment, type NetworkSample } from "@/utils/readiness";
 
 const REQUIRE_CAMERA = import.meta.env.VITE_REQUIRE_CAMERA === "true";
 
-const HardwareCheck: React.FC<HardwareCheckProps> = ({ onStart }) => {
-    const [progress, setProgress] = useState<HardwareCheckingProgress>({
-        osAndBrowser: ProctoringState.WAITING,
-        internet: ProctoringState.WAITING,
-        camera: ProctoringState.WAITING,
-        audio: ProctoringState.WAITING,
-        microphone: ProctoringState.WAITING,
-    });
-    const [allPassed, setAllPassed] = useState(false);
-    const [internetResult, setInternetResult] = useState<InternetSpeedResult | null>(null);
+export interface HardwareCheckProps {
+    onStart?: () => void;
+    /** Called once each time every check has settled (first run and each retry). Must not block. */
+    onReadiness?: (report: ReadinessReport) => void;
+    /** Injectable for tests. Default: probe our own API (utils/readiness.ts). */
+    measure?: () => Promise<NetworkSample>;
+    requestMedia?: () => Promise<MediaStream | null>;
+    checkAudioOutput?: () => Promise<boolean>;
+}
+
+const defaultMeasure = () => measureNetwork({ baseUrl: API_BASE_URL });
+
+async function defaultRequestMedia(): Promise<MediaStream | null> {
+    if (REQUIRE_CAMERA) return checkCamera();
+    try {
+        return (await navigator.mediaDevices?.getUserMedia({ audio: true })) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+async function defaultCheckAudioOutput(): Promise<boolean> {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        if (ctx.state === "suspended") await ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.01, ctx.currentTime);
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+        osc.onended = () => ctx.close().catch(() => {});
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** Mic level meter. Returns a stop function so the loop and AudioContext don't leak. */
+function startAudioLevelMonitoring(stream: MediaStream, onLevel: (level: number) => void): () => void {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return () => {};
+        const ctx = new AudioCtx();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        ctx.createMediaStreamSource(stream).connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        let frame = 0;
+        const update = () => {
+            analyser.getByteFrequencyData(data);
+            onLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
+            frame = requestAnimationFrame(update);
+        };
+        update();
+        return () => {
+            cancelAnimationFrame(frame);
+            ctx.close().catch(() => {});
+        };
+    } catch {
+        return () => {};
+    }
+}
+
+/** Read synchronously on first render. No timer, so it can never get stuck on "Checking...". */
+function detectClient() {
+    try {
+        const { browser, version } = getBrowserInfo();
+        return { browser: [browser, version.split(".")[0]].filter(Boolean).join(" "), os: getOSInfo() };
+    } catch {
+        return { browser: "Unknown", os: "Unknown" };
+    }
+}
+
+function StateIcon({ state }: { state: ProctoringState }) {
+    if (state === ProctoringState.LOADING) return <Loader2 aria-hidden className="h-4 w-4 animate-spin text-muted-foreground" />;
+    if (state === ProctoringState.PASSED) return <CheckCircle aria-hidden className="h-4 w-4 text-green-500" />;
+    if (state === ProctoringState.WARNING) return <AlertTriangle aria-hidden className="h-4 w-4 text-amber-500" />;
+    if (state === ProctoringState.ERROR) return <XCircle aria-hidden className="h-4 w-4 text-destructive" />;
+    return <Circle aria-hidden className="h-4 w-4 text-muted-foreground/40" />;
+}
+
+const STATE_LABEL: Record<ProctoringState, string> = {
+    [ProctoringState.WAITING]: "Waiting",
+    [ProctoringState.LOADING]: "Checking...",
+    [ProctoringState.PASSED]: "Passed",
+    [ProctoringState.WARNING]: "Weak",
+    [ProctoringState.ERROR]: "Failed",
+};
+
+const STATE_COLOR: Record<ProctoringState, string> = {
+    [ProctoringState.WAITING]: "text-muted-foreground",
+    [ProctoringState.LOADING]: "text-muted-foreground",
+    [ProctoringState.PASSED]: "text-green-600",
+    [ProctoringState.WARNING]: "text-amber-600",
+    [ProctoringState.ERROR]: "text-destructive",
+};
+
+function Row({ label, state, children }: { label: string; state: ProctoringState; children?: React.ReactNode }) {
+    return (
+        <div className="px-4 py-3" data-testid={`check-${label}`}>
+            <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium">{label}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <StateIcon state={state} />
+                    <span className={`text-xs w-16 text-right ${STATE_COLOR[state]}`}>{STATE_LABEL[state]}</span>
+                </div>
+            </div>
+            {children}
+        </div>
+    );
+}
+
+type Tone = "good" | "weak" | "bad" | "none";
+const TONE_CLASS: Record<Tone, string> = {
+    good: "text-green-600",
+    weak: "text-amber-600",
+    bad: "text-destructive",
+    none: "text-muted-foreground",
+};
+
+function tone(value: number | null, warn: number, fail: number, higherIsBetter: boolean): Tone {
+    if (value === null) return "none";
+    if (higherIsBetter) return value < fail ? "bad" : value < warn ? "weak" : "good";
+    return value > fail ? "bad" : value > warn ? "weak" : "good";
+}
+
+function NetworkMetrics({ sample }: { sample: NetworkSample }) {
+    const { downloadMbps: down, uploadMbps: up, latencyMs: rtt } = sample;
+    const mbps = (v: number | null) => (v === null ? "not measured" : `${v < 10 ? v.toFixed(2) : v.toFixed(1)} Mbps`);
+    return (
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <span className={TONE_CLASS[tone(down, THRESHOLDS.warn.downloadMbps, THRESHOLDS.fail.downloadMbps, true)]}>↓ {mbps(down)}</span>
+            <span className={TONE_CLASS[tone(up, THRESHOLDS.warn.uploadMbps, THRESHOLDS.fail.uploadMbps, true)]}>↑ {mbps(up)}</span>
+            <span className={TONE_CLASS[tone(rtt, THRESHOLDS.warn.latencyMs, THRESHOLDS.fail.latencyMs, false)]}>
+                {rtt === null ? "latency not measured" : `${rtt} ms`}
+            </span>
+        </div>
+    );
+}
+
+const toCheckState = (state: ProctoringState): ReadinessCheckState =>
+    state === ProctoringState.PASSED ? "passed"
+        : state === ProctoringState.WARNING ? "warn"
+            : state === ProctoringState.ERROR ? "failed"
+                : "skipped";
+
+const HardwareCheck: React.FC<HardwareCheckProps> = ({
+    onStart,
+    onReadiness,
+    measure = defaultMeasure,
+    requestMedia = defaultRequestMedia,
+    checkAudioOutput = defaultCheckAudioOutput,
+}) => {
+    const [client] = useState(detectClient);
+
+    const [networkAttempt, setNetworkAttempt] = useState(0);
+    const [network, setNetwork] = useState(ProctoringState.LOADING);
+    const [sample, setSample] = useState<NetworkSample | null>(null);
+    const [assessment, setAssessment] = useState<NetworkAssessment | null>(null);
+
+    const [mediaAttempt, setMediaAttempt] = useState(0);
+    const [media, setMedia] = useState(ProctoringState.LOADING);
+    const [audioOut, setAudioOut] = useState(ProctoringState.WAITING);
+    const [audioLevel, setAudioLevel] = useState(0);
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
-    const [audioLevel, setAudioLevel] = useState<number>(0);
     const videoRef = useRef<HTMLVideoElement>(null);
 
+    // Bumped only when a check actually produces a new result. Reporting keys off this,
+    // not the attempt counters, so the render right after a Retry click (old results
+    // still on screen) can never be reported as the new attempt.
+    const [resultVersion, setResultVersion] = useState(0);
+    const bumpResult = () => setResultVersion((v) => v + 1);
+
+    // Network: measured against our own API, independent of the microphone check.
     useEffect(() => {
-        const { osAndBrowser, internet, camera, audio, microphone } = progress;
-        setAllPassed(
-            osAndBrowser === ProctoringState.PASSED &&
-            internet === ProctoringState.PASSED &&
-            camera === ProctoringState.PASSED &&
-            audio === ProctoringState.PASSED &&
-            microphone === ProctoringState.PASSED
-        );
-    }, [progress]);
+        let cancelled = false;
+        setNetwork(ProctoringState.LOADING);
+        setSample(null);
+        setAssessment(null);
+        const unmeasured: NetworkSample = { downloadMbps: null, uploadMbps: null, latencyMs: null };
+        measure()
+            .catch(() => unmeasured)
+            .then((result) => {
+                if (cancelled) return;
+                const verdict = assessNetwork(result);
+                setSample(result);
+                setAssessment(verdict);
+                setNetwork(
+                    verdict.verdict === "pass" ? ProctoringState.PASSED
+                        : verdict.verdict === "warn" ? ProctoringState.WARNING
+                            : ProctoringState.ERROR,
+                );
+                bumpResult();
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [measure, networkAttempt]);
+
+    // Microphone (and camera if required), then audio output. Runs even if the network is weak.
+    useEffect(() => {
+        let cancelled = false;
+        let acquired: MediaStream | null = null;
+        let stopLevel = () => {};
+        setMedia(ProctoringState.LOADING);
+        setAudioOut(ProctoringState.WAITING);
+
+        requestMedia().then(async (stream) => {
+            if (cancelled) {
+                stream?.getTracks().forEach((t) => t.stop());
+                return;
+            }
+            if (!stream) {
+                setMedia(ProctoringState.ERROR);
+                bumpResult();
+                return;
+            }
+            acquired = stream;
+            if (REQUIRE_CAMERA) setVideoStream(stream);
+            stopLevel = startAudioLevelMonitoring(stream, setAudioLevel);
+            setMedia(ProctoringState.PASSED);
+            setAudioOut(ProctoringState.LOADING);
+            const ok = await checkAudioOutput();
+            if (!cancelled) {
+                setAudioOut(ok ? ProctoringState.PASSED : ProctoringState.ERROR);
+                bumpResult();
+            }
+        });
+
+        return () => {
+            cancelled = true;
+            stopLevel();
+            acquired?.getTracks().forEach((t) => t.stop());
+            setVideoStream(null);
+        };
+    }, [requestMedia, checkAudioOutput, mediaAttempt]);
 
     useEffect(() => {
         if (videoRef.current && videoStream) videoRef.current.srcObject = videoStream;
     }, [videoStream]);
 
-    useEffect(() => {
-        return () => { videoStream?.getTracks().forEach((t) => t.stop()); };
-    }, [videoStream]);
+    const settled =
+        network !== ProctoringState.LOADING &&
+        media !== ProctoringState.LOADING &&
+        audioOut !== ProctoringState.LOADING &&
+        !(media === ProctoringState.PASSED && audioOut === ProctoringState.WAITING);
+    const blocked = network === ProctoringState.ERROR || media === ProctoringState.ERROR || audioOut === ProctoringState.ERROR;
+    const canStart =
+        media === ProctoringState.PASSED &&
+        audioOut === ProctoringState.PASSED &&
+        (network === ProctoringState.PASSED || network === ProctoringState.WARNING);
 
-    const checkAudioPlayback = async (): Promise<boolean> => {
-        try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            const ctx = new AudioCtx();
-            if (ctx.state === "suspended") await ctx.resume();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            gain.gain.setValueAtTime(0.01, ctx.currentTime);
-            osc.frequency.setValueAtTime(440, ctx.currentTime);
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.1);
-            return true;
-        } catch { return false; }
+    // Report each settled set of new results once, so the assessor sees the conditions and the number of attempts.
+    const reportedVersion = useRef(0);
+    useEffect(() => {
+        if (!settled || !sample || !onReadiness || resultVersion === reportedVersion.current) return;
+        reportedVersion.current = resultVersion;
+        onReadiness({
+            verdict: blocked ? "fail" : network === ProctoringState.WARNING ? "warn" : "pass",
+            network: { download_mbps: sample.downloadMbps, upload_mbps: sample.uploadMbps, latency_ms: sample.latencyMs },
+            checks: {
+                browser: "passed",
+                network: toCheckState(network),
+                microphone: toCheckState(media),
+                audio_output: toCheckState(audioOut),
+            },
+            client,
+        });
+    }, [settled, sample, onReadiness, blocked, network, media, audioOut, client, resultVersion]);
+
+    const retry = () => {
+        if (network !== ProctoringState.PASSED) setNetworkAttempt((n) => n + 1);
+        if (media === ProctoringState.ERROR || audioOut === ProctoringState.ERROR) setMediaAttempt((n) => n + 1);
     };
-
-    const startAudioLevelMonitoring = (stream: MediaStream) => {
-        try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            const ctx = new AudioCtx();
-            const source = ctx.createMediaStreamSource(stream);
-            const analyser = ctx.createAnalyser();
-            analyser.fftSize = 256;
-            source.connect(analyser);
-            const data = new Uint8Array(analyser.frequencyBinCount);
-            const update = () => {
-                analyser.getByteFrequencyData(data);
-                setAudioLevel(Math.round(data.reduce((a, b) => a + b, 0) / data.length));
-                requestAnimationFrame(update);
-            };
-            update();
-        } catch { /* silent */ }
-    };
-
-    // Step 1: OS & browser
-    useEffect(() => {
-        setProgress((p) => ({ ...p, osAndBrowser: ProctoringState.LOADING }));
-        setTimeout(() => {
-            getBrowserInfo();
-            getOSInfo();
-            getCurrentTime();
-            setProgress((p) => ({
-                ...p,
-                osAndBrowser: ProctoringState.PASSED,
-                internet: ProctoringState.LOADING,
-            }));
-        }, 800);
-    }, []);
-
-    // Step 2: Internet
-    useEffect(() => {
-        if (progress.internet !== ProctoringState.LOADING) return;
-        testInternetSpeed(DEFAULT_THRESHOLDS).then((result) => {
-            setInternetResult(result);
-            setProgress((p) => ({
-                ...p,
-                internet: result.passed ? ProctoringState.PASSED : ProctoringState.ERROR,
-                ...(result.passed
-                    ? REQUIRE_CAMERA
-                        ? { camera: ProctoringState.LOADING }
-                        : { camera: ProctoringState.PASSED, microphone: ProctoringState.LOADING }
-                    : {}),
-            }));
-        });
-    }, [progress.internet]);
-
-    // Step 3: Camera + microphone (or microphone-only when camera disabled)
-    useEffect(() => {
-        const cameraLoading = progress.camera === ProctoringState.LOADING;
-        const micLoading = !REQUIRE_CAMERA && progress.microphone === ProctoringState.LOADING;
-        if (!cameraLoading && !micLoading) return;
-
-        const getStream = REQUIRE_CAMERA
-            ? checkCamera()
-            : navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
-
-        getStream.then((stream) => {
-            if (stream) {
-                if (REQUIRE_CAMERA) setVideoStream(stream);
-                startAudioLevelMonitoring(stream);
-                setProgress((p) => ({
-                    ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.PASSED } : {}),
-                    microphone: ProctoringState.PASSED,
-                    audio: ProctoringState.LOADING,
-                }));
-            } else {
-                setProgress((p) => ({
-                    ...p,
-                    ...(REQUIRE_CAMERA ? { camera: ProctoringState.ERROR } : {}),
-                    microphone: ProctoringState.ERROR,
-                }));
-            }
-        });
-    }, [progress.camera, progress.microphone]);
-
-    // Step 4: Audio output
-    useEffect(() => {
-        if (progress.audio !== ProctoringState.LOADING) return;
-        checkAudioPlayback().then((ok) => {
-            setProgress((p) => ({
-                ...p,
-                audio: ok ? ProctoringState.PASSED : ProctoringState.ERROR,
-            }));
-        });
-    }, [progress.audio]);
-
-    const retryAll = () => {
-        videoStream?.getTracks().forEach((t) => t.stop());
-        setVideoStream(null);
-        setInternetResult(null);
-        setProgress({
-            osAndBrowser: ProctoringState.LOADING,
-            internet: ProctoringState.WAITING,
-            camera: ProctoringState.WAITING,
-            audio: ProctoringState.WAITING,
-            microphone: ProctoringState.WAITING,
-        });
-    };
-
-    const thresholds = DEFAULT_THRESHOLDS;
-
-    const rows: { key: keyof HardwareCheckingProgress; label: string }[] = [
-        { key: "osAndBrowser", label: "OS & browser" },
-        { key: "internet", label: "Internet" },
-        ...(REQUIRE_CAMERA ? [{ key: "camera" as const, label: "Camera" }] : []),
-        { key: "microphone", label: "Microphone" },
-        { key: "audio", label: "Audio output" },
-    ];
-
-    const hasError = Object.values(progress).some((s) => s === ProctoringState.ERROR);
+    const canRetry = settled && (network !== ProctoringState.PASSED || blocked);
 
     return (
         <div className="rounded-lg border bg-card overflow-hidden">
-            {/* Camera preview */}
-            {REQUIRE_CAMERA && <div className="relative bg-black aspect-video">
-                {videoStream ? (
-                    <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
-                ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <svg className="w-10 h-10 opacity-30" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                        </svg>
-                        <p className="text-xs">Camera not active</p>
-                    </div>
-                )}
-                {progress.camera === ProctoringState.PASSED && videoStream && (
-                    <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        LIVE
-                    </span>
-                )}
-            </div>}
-
-            {/* Checklist */}
-            <div className="divide-y">
-                {rows.map(({ key, label }) => (
-                    <div key={key} className="px-4 py-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{label}</span>
-                            <div className="flex items-center gap-2">
-                                <StateIcon state={progress[key]} />
-                                <span className={`text-xs w-16 text-right ${progress[key] === ProctoringState.PASSED ? "text-green-600" :
-                                    progress[key] === ProctoringState.ERROR ? "text-destructive" :
-                                        "text-muted-foreground"
-                                    }`}>
-                                    {stateLabel(progress[key])}
-                                </span>
-                            </div>
+            {REQUIRE_CAMERA && (
+                <div className="relative bg-black aspect-video">
+                    {videoStream ? (
+                        <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                            Camera not active
                         </div>
+                    )}
+                </div>
+            )}
 
-                        {/* Internet speed details */}
-                        {key === "internet" && internetResult && (
-                            <div className="mt-2 flex gap-3 text-xs">
-                                <span className={internetResult.download >= thresholds.minDownloadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↓ {internetResult.download} Mbps
-                                </span>
-                                <span className={internetResult.upload >= thresholds.minUploadMbps ? "text-green-600" : "text-destructive"}>
-                                    ↑ {internetResult.upload} Mbps
-                                </span>
-                                <span className={internetResult.ping <= thresholds.maxPingMs ? "text-green-600" : "text-destructive"}>
-                                    {internetResult.ping} ms
-                                </span>
-                            </div>
-                        )}
+            <div className="divide-y">
+                <Row label="OS & browser" state={ProctoringState.PASSED}>
+                    <p className="mt-1 text-xs text-muted-foreground">{client.browser} · {client.os}</p>
+                </Row>
 
-                        {/* Mic level bar */}
-                        {key === "microphone" && progress.microphone === ProctoringState.PASSED && (
-                            <div className="mt-2 flex items-center gap-2">
-                                <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-                                    <div
-                                        className="h-full bg-green-500 transition-all duration-150"
-                                        style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
-                                    />
-                                </div>
-                                <span className="text-xs text-muted-foreground w-8 text-right">{audioLevel}</span>
+                <Row label="Internet" state={network}>
+                    {network === ProctoringState.LOADING && (
+                        <p role="status" className="mt-1 text-xs text-muted-foreground">
+                            Testing your connection to the interview server. This takes up to 30 seconds.
+                        </p>
+                    )}
+                    {sample && <NetworkMetrics sample={sample} />}
+                    {assessment && assessment.reasons.length > 0 && (
+                        <ul className={`mt-2 space-y-0.5 text-xs break-words ${network === ProctoringState.ERROR ? "text-destructive" : "text-amber-700"}`}>
+                            {assessment.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+                        </ul>
+                    )}
+                    {network === ProctoringState.WARNING && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            You can still start. For a smoother interview, move closer to your Wi-Fi and pause other downloads or video calls.
+                        </p>
+                    )}
+                    {network === ProctoringState.ERROR && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                            Try another network, such as a phone hotspot, then test again.
+                        </p>
+                    )}
+                </Row>
+
+                <Row label={REQUIRE_CAMERA ? "Camera & microphone" : "Microphone"} state={media}>
+                    {media === ProctoringState.PASSED && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden" aria-hidden>
+                                <div className="h-full bg-green-500 transition-all duration-150" style={{ width: `${Math.min(audioLevel * 2, 100)}%` }} />
                             </div>
-                        )}
-                    </div>
-                ))}
+                            <span className="text-xs text-muted-foreground">Say something to test</span>
+                        </div>
+                    )}
+                    {media === ProctoringState.ERROR && (
+                        <p className="mt-1 text-xs text-destructive">
+                            We couldn't use your microphone. Allow access from the icon in your browser's address bar, then try again.
+                        </p>
+                    )}
+                </Row>
+
+                <Row label="Audio output" state={audioOut}>
+                    {audioOut === ProctoringState.ERROR && (
+                        <p className="mt-1 text-xs text-destructive">We couldn't play sound. Check your speakers or headphones, then try again.</p>
+                    )}
+                </Row>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t flex items-center justify-between gap-3 bg-muted/30">
-                {hasError && (
-                    <Button variant="outline" size="sm" onClick={retryAll}>
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Retry
+            <div className="px-4 py-3 border-t flex flex-wrap items-center justify-between gap-3 bg-muted/30">
+                {canRetry && (
+                    <Button variant="outline" size="sm" onClick={retry}>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden />
+                        {blocked ? "Retry" : "Test again"}
                     </Button>
                 )}
-                <Button
-                    size="sm"
-                    className="ml-auto"
-                    disabled={!allPassed}
-                    onClick={onStart}
-                >
-                    Start Interview
-                </Button>
+                <div className="ml-auto flex items-center gap-3">
+                    {settled && !canStart && (
+                        <span id="start-blocked-reason" className="text-xs text-muted-foreground">Fix the items marked Failed to continue.</span>
+                    )}
+                    <Button size="sm" disabled={!canStart} onClick={onStart} aria-describedby={settled && !canStart ? "start-blocked-reason" : undefined}>
+                        Start Interview
+                    </Button>
+                </div>
             </div>
         </div>
     );

@@ -4,6 +4,8 @@ export enum ProctoringState {
     WAITING = "waiting",
     LOADING = "loading",
     PASSED = "passed",
+    /** Usable but degraded (e.g. weak connection): the candidate may still start. */
+    WARNING = "warning",
     ERROR = "error",
 }
 

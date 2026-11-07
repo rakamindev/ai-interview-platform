@@ -208,7 +208,13 @@ export default function InterviewPage() {
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            <HardwareCheck
+              onStart={() => { setHardwareCheckDone(true); startInterview(); }}
+              onReadiness={(report) => {
+                // Context for the assessor only; never block or bother the candidate if it fails.
+                if (token) sessionsApi.submitReadiness(token, report).catch(() => {});
+              }}
+            />
           </div>
         ) : (
           <div className="space-y-4">
