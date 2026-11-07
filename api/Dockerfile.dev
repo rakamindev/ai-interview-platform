@@ -1,0 +1,16 @@
+# Dev-only image. The production Dockerfile intentionally installs
+# `without development test`, so rspec/vitest tooling cannot run there.
+FROM ruby:3.3.2
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev postgresql-client git curl tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV BUNDLE_JOBS=4 BUNDLE_RETRY=3
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+EXPOSE 3001

@@ -1,0 +1,78 @@
+# Local development stack. One command:
+#   docker compose up -d
+# Logs:
+#   docker compose logs -f api
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"   # host 5434 so it does not clash with an existing Postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    image: ai-interview-api:dev
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    volumes:
+      - ./api:/app
+      - bundle:/usr/local/bundle
+    environment:
+      RAILS_ENV: development
+      WEB_CONCURRENCY: "0"
+      SEED_ON_BOOT: "1"
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      bash -lc "bundle check || bundle install;
+      bundle exec rails db:prepare;
+      if [ \"$$SEED_ON_BOOT\" = \"1\" ]; then bundle exec rails db:seed; fi;
+      bundle exec rails server -b 0.0.0.0 -p 3001"
+
+  worker:
+    image: ai-interview-api:dev
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    volumes:
+      - ./api:/app
+      - bundle:/usr/local/bundle
+    environment:
+      RAILS_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: bash -lc "bundle check || bundle install; bundle exec sidekiq -r ./config/environment.rb -C config/sidekiq.yml"
+    restart: on-failure
+
+volumes:
+  pgdata:
+  bundle:
