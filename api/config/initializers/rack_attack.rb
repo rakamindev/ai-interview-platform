@@ -16,6 +16,12 @@ class Rack::Attack
     req.ip if req.path.match?(%r{\A/api/v1/sessions/[^/]+/(candidate|audio_complete)\z})
   end
 
+  # Throttle unauthenticated connectivity probes (they accept uploads): 60 per minute per IP.
+  # One readiness run makes ~7 requests, so this leaves room for several retries.
+  throttle('connectivity/probe', limit: 60, period: 1.minute) do |req|
+    req.ip if req.path.start_with?('/api/v1/connectivity/') || req.path == '/api/v1/speed_test'
+  end
+
   # Return 429 JSON instead of the default plain-text response.
   self.throttled_responder = lambda do |_req|
     [
