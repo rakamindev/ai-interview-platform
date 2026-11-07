@@ -409,9 +409,9 @@ module Portfolios
       label.downcase.gsub(/[^a-z0-9]+/, ' ').strip
     end
 
-    # True when this worker claimed the run but another worker has since reclaimed it. Every state
-    # change a worker makes (publish, retrying, failed) is fenced by this check. The retries-exhausted
-    # path never claimed (@claim_count is nil) and may always fail the run.
+    # True when another worker has reclaimed this worker's run. Publication and failure check this
+    # under a generation row lock; retrying uses claim_count in its conditional UPDATE. A read alone
+    # is not a claim fence. Retries-exhausted has no claim and is restricted to the retrying state.
     def lost_claim?
       !@claim_count.nil? && @generation.claim_count != @claim_count
     end
@@ -437,7 +437,7 @@ module Portfolios
     def fail!(code, message, only_if_status: nil)
       Portfolio.transaction do
         @portfolio.lock!
-        @generation.reload
+        @generation.lock!
         next if @generation.terminal?
         next if lost_claim?
         next if only_if_status && @generation.status != only_if_status
