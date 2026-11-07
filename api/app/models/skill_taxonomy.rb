@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class SkillTaxonomy < ApplicationRecord
+  before_validation :generate_custom_skill_id, on: :create
+
   validates :skill_id,    presence: true, uniqueness: true, length: { maximum: 50 }
   validates :skill_label, presence: true, length: { maximum: 255 }
   validates :category,    presence: true, length: { maximum: 50 }
@@ -11,4 +13,15 @@ class SkillTaxonomy < ApplicationRecord
   validates :l5_anchor,   presence: true
 
   CATEGORIES = %w[engineering soft_skills product_process].freeze
+
+  private
+
+  def generate_custom_skill_id
+    return if skill_id.present?
+
+    loop do
+      self.skill_id = "SK-CUST-#{SecureRandom.hex(4).upcase}"
+      break unless SkillTaxonomy.exists?(skill_id: skill_id)
+    end
+  end
 end

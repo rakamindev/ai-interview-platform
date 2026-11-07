@@ -6,10 +6,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Plus } from "lucide-react"; 
 import { skillTaxonomiesApi } from "@/services/skillTaxonomies";
 import type { AssessmentSkill, SkillTaxonomy } from "@/types";
-
 
 interface SkillPickerProps {
   open: boolean;
@@ -36,11 +35,15 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
     s.skill_label.toLowerCase().includes(query.toLowerCase())
   );
 
+  const isExactMatch = skills.some(
+    (s) => s.skill_label.toLowerCase() === query.trim().toLowerCase()
+  );
+
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
-      skill_id: undefined,
+      skill_id: s.skill_id as any, 
       skill_label: s.skill_label,
-      is_custom: false,
+      is_custom: false,           
       expected_level: 3,
       scope_include: s.scope_include,
       l1_anchor: s.l1_anchor,
@@ -48,6 +51,19 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
       l3_anchor: s.l3_anchor,
       l4_anchor: s.l4_anchor,
       l5_anchor: s.l5_anchor,
+    });
+    onOpenChange(false);
+    setQuery("");
+  };
+
+  const handleSelectCustom = () => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    onSelect({
+      skill_id: undefined, 
+      skill_label: trimmed,
+      is_custom: true,     
+      expected_level: 3,
     });
     onOpenChange(false);
     setQuery("");
@@ -63,7 +79,7 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search skills..."
+            placeholder="Search or type new skill..." 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-9"
@@ -76,19 +92,34 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
           ) : (
-            filtered.map((s) => (
-              <button
-                key={s.skill_id}
-                type="button"
-                onClick={() => handleSelect(s)}
-                className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
-              >
-                {s.skill_label}
-              </button>
-            ))
+            <>
+              {filtered.map((s) => (
+                <button
+                  key={s.skill_id}
+                  type="button"
+                  onClick={() => handleSelect(s)}
+                  className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm"
+                >
+                  {s.skill_label}
+                </button>
+              ))}
+
+              {query.trim().length > 0 && !isExactMatch && (
+                <button
+                  type="button"
+                  onClick={handleSelectCustom}
+                  className="w-full text-left px-3 py-2 rounded-md hover:bg-muted transition-colors text-sm text-teal-600 dark:text-teal-400 font-medium flex items-center gap-2 border-t mt-1 pt-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add "{query.trim()}" as new skill
+                </button>
+              )}
+
+              {filtered.length === 0 && isExactMatch && (
+                <p className="text-sm text-muted-foreground text-center py-6">No skills found.</p>
+              )}
+            </>
           )}
         </div>
       </DialogContent>
