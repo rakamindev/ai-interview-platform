@@ -1,0 +1,51 @@
+# A2: agent-run, synthetic legacy rows in local test DB transaction
+# RED: migration before collision handling, PG::UniqueViolation
+# Command: bundle exec rspec spec/requests/portfolio_backfill_collision_spec.rb
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+WARNING: Skipping key "GEMINI_API_KEY". Already set in ENV.
+WARNING: Skipping key "ALLOWED_ORIGINS". Already set in ENV.
+
+Randomized with seed 61012
+F
+
+Failures:
+
+  1) Portfolio generation backfill collisions keeps legacy keys unique and repeats down/up without losing the first configured identity
+     Failure/Error: ActiveRecord::Migration.suppress_messages { migration.up }
+
+     ActiveRecord::RecordNotUnique:
+       PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_portfolio_skills_on_generation_id_and_skill_key"
+       DETAIL:  Key (generation_id, skill_key)=(4736, assessment_skill:3814) already exists.
+     # ./db/migrate/20261106100001_backfill_portfolio_generations.rb:32:in `up'
+     # ./spec/requests/portfolio_backfill_collision_spec.rb:26:in `block (3 levels) in <top (required)>'
+     # ./spec/requests/portfolio_backfill_collision_spec.rb:26:in `block (2 levels) in <top (required)>'
+     # ------------------
+     # --- Caused by: ---
+     # PG::UniqueViolation:
+     #   ERROR:  duplicate key value violates unique constraint "index_portfolio_skills_on_generation_id_and_skill_key"
+     #   DETAIL:  Key (generation_id, skill_key)=(4736, assessment_skill:3814) already exists.
+     #   ./db/migrate/20261106100001_backfill_portfolio_generations.rb:32:in `up'
+
+Finished in 0.17834 seconds (files took 1.24 seconds to load)
+1 example, 1 failure
+
+Failed examples:
+
+rspec ./spec/requests/portfolio_backfill_collision_spec.rb:11 # Portfolio generation backfill collisions keeps legacy keys unique and repeats down/up without losing the first configured identity
+
+Randomized with seed 61012
+
+
+# GREEN: same assertions, lowest configured identity plus normalised-key suffix
+WARNING: Skipping key "SECRET_KEY_BASE". Already set in ENV.
+WARNING: Skipping key "GEMINI_API_KEY". Already set in ENV.
+WARNING: Skipping key "ALLOWED_ORIGINS". Already set in ENV.
+
+Randomized with seed 56082
+.
+
+Finished in 0.21566 seconds (files took 1.2 seconds to load)
+1 example, 0 failures
+
+Randomized with seed 56082
+

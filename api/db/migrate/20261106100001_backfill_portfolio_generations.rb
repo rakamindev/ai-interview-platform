@@ -36,23 +36,33 @@ class BackfillPortfolioGenerations < ActiveRecord::Migration[7.0]
       JOIN sessions s ON s.id = p.session_id
       JOIN assessment_skills ask ON ask.assessment_id = s.assessment_id
       WHERE ps.portfolio_id = p.id AND ps.is_discovered = false AND ps.skill_key IS NULL
-        AND lower(ask.skill_label) = lower(ps.skill_label);
+        AND lower(ask.skill_label) = lower(ps.skill_label)
+        AND NOT EXISTS (
+          SELECT 1 FROM portfolio_skills earlier
+          WHERE earlier.generation_id = ps.generation_id AND earlier.id < ps.id
+            AND earlier.is_discovered = false
+            AND lower(earlier.skill_label) = lower(ask.skill_label)
+        );
     SQL
 
-    # Everything else (discovered, or configured skills whose assessment skill was renamed/removed).
+    # Later configured duplicates fall through here too. Compare the final prefixed,
+    # normalised key, not the raw label: C++/C# and all-symbol labels can collide.
     execute <<~SQL
-      UPDATE portfolio_skills
-      SET skill_key = (CASE WHEN is_discovered THEN 'discovered:' ELSE 'label:' END)
-                      || trim(regexp_replace(lower(skill_label), '[^a-z0-9]+', ' ', 'g'))
-                      || CASE WHEN id IN (
-                           SELECT ps2.id FROM portfolio_skills ps2
-                           WHERE ps2.skill_key IS NULL
-                           AND EXISTS (SELECT 1 FROM portfolio_skills ps3
-                                       WHERE ps3.generation_id = ps2.generation_id AND ps3.id < ps2.id
-                                       AND lower(ps3.skill_label) = lower(ps2.skill_label))
-                         ) THEN ':' || id ELSE '' END
-      WHERE skill_key IS NULL;
+      UPDATE portfolio_skills ps
+      SET skill_key = (CASE WHEN ps.is_discovered THEN 'discovered:' ELSE 'label:' END)
+                      || trim(regexp_replace(lower(ps.skill_label), '[^a-z0-9]+', ' ', 'g'))
+                      || CASE WHEN EXISTS (
+                           SELECT 1 FROM portfolio_skills earlier
+                           WHERE earlier.generation_id = ps.generation_id AND earlier.id < ps.id
+                             AND COALESCE(earlier.skill_key,
+                                   (CASE WHEN earlier.is_discovered THEN 'discovered:' ELSE 'label:' END)
+                                   || trim(regexp_replace(lower(earlier.skill_label), '[^a-z0-9]+', ' ', 'g')))
+                                 = (CASE WHEN ps.is_discovered THEN 'discovered:' ELSE 'label:' END)
+                                   || trim(regexp_replace(lower(ps.skill_label), '[^a-z0-9]+', ' ', 'g'))
+                         ) THEN ':' || ps.id ELSE '' END
+      WHERE ps.skill_key IS NULL;
     SQL
+
   end
 
   def down
