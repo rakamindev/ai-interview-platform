@@ -3,8 +3,8 @@
 module Api
   module V1
     class SessionsController < ApiController
-      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete]
-      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete]
+      authorize_auth_token! :assessor, except: %i[candidate_info audio_complete readiness]
+      skip_before_action :require_tenant!, only: %i[candidate_info audio_complete readiness]
 
       before_action :set_session, only: %i[show end_session coverage transcript]
 
@@ -153,7 +153,46 @@ module Api
         )
       end
 
+      # POST /sessions/:token/readiness  — no JWT, invite token in URL
+      # Records the candidate's pre-interview readiness result (network/mic checks)
+      # so assessors can read a weak-connection interview in context. The frontend
+      # sends this fire-and-forget: a failure here must never block the candidate.
+      def readiness
+        session = Session.unscoped.find_by(invite_token: params[:token])
+        return json_error("Invalid or expired invite token", :not_found) unless session
+        return json_error("Session already ended", :unprocessable_entity) if session.ended?
+
+        check = ReadinessCheck.new(**readiness_params)
+        unless check.valid?
+          return json_error("Invalid readiness result", :unprocessable_entity, details: check.error_details)
+        end
+
+        # Row lock so two concurrent submissions (e.g. a retry racing the first
+        # request) cannot both read the same attempt count.
+        Session.unscoped do
+          session.with_lock do
+            previous = session.readiness_check.to_h.fetch('attempts', 0).to_i
+            session.update!(readiness_check: check.to_record(previous_attempts: previous))
+          end
+        end
+
+        json_response(readiness_check: session.readiness_check)
+      rescue ActionController::ParameterMissing
+        json_error("readiness is required", :unprocessable_entity)
+      end
+
       private
+
+      # Whitelist: anything else (IP, raw user agent, e-mail, ...) is dropped here.
+      def readiness_params
+        params.require(:readiness)
+              .permit(:verdict,
+                      network: %i[download_mbps upload_mbps latency_ms],
+                      checks:  ReadinessCheck::CHECK_NAMES,
+                      client:  %i[browser os])
+              .to_h
+              .symbolize_keys
+      end
 
       def set_session
         @session = Session.find(params[:id])
@@ -175,6 +214,7 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
+          readiness_check:  session.readiness_check,
           created_at:       session.created_at
         }
       end
