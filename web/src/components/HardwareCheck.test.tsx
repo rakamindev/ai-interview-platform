@@ -91,6 +91,29 @@ describe("HardwareCheck", () => {
         expect(startButton()).toBeDisabled();
     });
 
+    it("reports the retried run with its new result, not the stale one", async () => {
+        // Regression: clicking Retry re-rendered with the old "Failed" state still in place,
+        // which was reported as the new attempt; the real (passing) result was never sent.
+        const measure = vi.fn<() => Promise<NetworkSample>>()
+            .mockResolvedValueOnce(deadNet)
+            .mockResolvedValueOnce(goodNet);
+        const props = setup({ measure });
+
+        await waitFor(() => expect(props.onReadiness).toHaveBeenCalledTimes(1));
+        expect(props.onReadiness).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: "fail" }));
+
+        await userEvent.click(screen.getByRole("button", { name: /retry/i }));
+        await within(row("Internet")).findByText("Passed");
+
+        await waitFor(() => expect(props.onReadiness).toHaveBeenCalledTimes(2));
+        expect(props.onReadiness).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                verdict: "pass",
+                network: { download_mbps: 78.5, upload_mbps: 31.7, latency_ms: 11 },
+            }),
+        );
+    });
+
     it("reports each settled run to the assessor exactly once, with the measured numbers", async () => {
         const props = setup({ measure: vi.fn(async () => weakNet) });
 

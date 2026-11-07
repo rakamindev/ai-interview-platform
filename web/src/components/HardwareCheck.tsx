@@ -179,6 +179,12 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({
     const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
+    // Bumped only when a check actually produces a new result. Reporting keys off this,
+    // not the attempt counters, so the render right after a Retry click (old results
+    // still on screen) can never be reported as the new attempt.
+    const [resultVersion, setResultVersion] = useState(0);
+    const bumpResult = () => setResultVersion((v) => v + 1);
+
     // Network: measured against our own API, independent of the microphone check.
     useEffect(() => {
         let cancelled = false;
@@ -198,6 +204,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({
                         : verdict.verdict === "warn" ? ProctoringState.WARNING
                             : ProctoringState.ERROR,
                 );
+                bumpResult();
             });
         return () => {
             cancelled = true;
@@ -219,6 +226,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({
             }
             if (!stream) {
                 setMedia(ProctoringState.ERROR);
+                bumpResult();
                 return;
             }
             acquired = stream;
@@ -227,7 +235,10 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({
             setMedia(ProctoringState.PASSED);
             setAudioOut(ProctoringState.LOADING);
             const ok = await checkAudioOutput();
-            if (!cancelled) setAudioOut(ok ? ProctoringState.PASSED : ProctoringState.ERROR);
+            if (!cancelled) {
+                setAudioOut(ok ? ProctoringState.PASSED : ProctoringState.ERROR);
+                bumpResult();
+            }
         });
 
         return () => {
@@ -253,12 +264,11 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({
         audioOut === ProctoringState.PASSED &&
         (network === ProctoringState.PASSED || network === ProctoringState.WARNING);
 
-    // Report each settled run once, so the assessor sees the conditions and the number of attempts.
-    const reportedRun = useRef<string | null>(null);
+    // Report each settled set of new results once, so the assessor sees the conditions and the number of attempts.
+    const reportedVersion = useRef(0);
     useEffect(() => {
-        const run = `${networkAttempt}:${mediaAttempt}`;
-        if (!settled || !sample || !onReadiness || reportedRun.current === run) return;
-        reportedRun.current = run;
+        if (!settled || !sample || !onReadiness || resultVersion === reportedVersion.current) return;
+        reportedVersion.current = resultVersion;
         onReadiness({
             verdict: blocked ? "fail" : network === ProctoringState.WARNING ? "warn" : "pass",
             network: { download_mbps: sample.downloadMbps, upload_mbps: sample.uploadMbps, latency_ms: sample.latencyMs },
@@ -270,7 +280,7 @@ const HardwareCheck: React.FC<HardwareCheckProps> = ({
             },
             client,
         });
-    }, [settled, sample, onReadiness, blocked, network, media, audioOut, client, networkAttempt, mediaAttempt]);
+    }, [settled, sample, onReadiness, blocked, network, media, audioOut, client, resultVersion]);
 
     const retry = () => {
         if (network !== ProctoringState.PASSED) setNetworkAttempt((n) => n + 1);
