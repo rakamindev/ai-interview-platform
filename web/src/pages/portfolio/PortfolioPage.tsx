@@ -9,7 +9,7 @@ import { sessionsApi } from "@/services/sessions";
 import { vacanciesApi } from "@/services/vacancies";
 import { portfoliosApi } from "@/services/portfolios";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Clock, Download, Loader2, RefreshCw, Zap, FileText } from "lucide-react";
 import type { Portfolio, AssessorOverride, Vacancy } from "@/types";
 
 const NO_CANDIDATE_ANSWERS = "no_candidate_answers";
@@ -19,6 +19,7 @@ export default function PortfolioPage() {
   const navigate = useNavigate();
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [processingDelayed, setProcessingDelayed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [overrides, setOverrides] = useState<Record<number, AssessorOverride>>({});
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -29,6 +30,7 @@ export default function PortfolioPage() {
   const fetchPortfolio = useCallback(async () => {
     const res = await sessionsApi.getPortfolio(Number(sessionId));
     const data = res.data as any;
+    setProcessingDelayed(Boolean(data.processing_delayed ?? data.portfolio?.processing_delayed));
     if (data.status === "generating" || data.portfolio?.generation_status === "generating" || data.portfolio?.generation_status === "pending") {
       setGenerating(true);
     } else if (data.portfolio) {
@@ -53,7 +55,7 @@ export default function PortfolioPage() {
       .finally(() => setLoading(false));
   }, [fetchPortfolio, sessionId]);
 
-  // Poll while generating
+  // Poll while generating, including while delayed, so results appear on their own once processing recovers
   usePolling(fetchPortfolio, 5000, generating);
 
   const handleOverrideSaved = (skillId: number, override: AssessorOverride) => {
@@ -155,8 +157,21 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {/* Waited too long: a spinner would imply progress that may not be happening */}
+      {generating && processingDelayed && (
+        <div className="border border-amber-300 bg-amber-50 rounded-lg p-12 text-center space-y-3">
+          <Clock className="h-8 w-8 text-amber-600 mx-auto" />
+          <div>
+            <p className="font-medium">Processing is delayed</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Results will appear here automatically once the system recovers. You can leave this page and come back later.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Generating state */}
-      {generating && (
+      {generating && !processingDelayed && (
         <div className="border rounded-lg p-12 text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <div>
@@ -187,6 +202,7 @@ export default function PortfolioPage() {
             size="sm"
             onClick={async () => {
               await sessionsApi.regeneratePortfolio(Number(sessionId));
+              setProcessingDelayed(false);
               setGenerating(true);
             }}
           >
@@ -198,6 +214,19 @@ export default function PortfolioPage() {
       {/* Ready state */}
       {!generating && portfolio?.generation_status === "complete" && (
         <>
+          {portfolio.coverage_missing && (
+            <div className="flex gap-2 border border-amber-300 bg-amber-50 rounded-lg p-4 text-sm text-amber-900">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Coverage data is missing for this session</p>
+                <p className="mt-0.5">
+                  Levels and confidence below were produced without it and may be unreliable.
+                  Check them against the transcript before relying on these results.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Configured skills */}
           <div className="space-y-3">
             <h2 className="text-sm font-semibold">Configured Skills</h2>

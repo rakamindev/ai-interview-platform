@@ -37,6 +37,14 @@ class Session < ApplicationRecord
     end
   end
 
+  # True when a finished result exists but coverage analysis recorded nothing, so its levels and confidence were
+  # produced without coverage data. Works on preloaded associations, so lists do not query per session.
+  def coverage_missing?
+    return false unless ended? && portfolio&.complete?
+
+    coverage_maps.none? { |map| map.probe_count.positive? }
+  end
+
   def invite_url
     "#{Rails.configuration.x.web_base_url}/interview/#{invite_token}"
   end

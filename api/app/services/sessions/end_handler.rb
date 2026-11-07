@@ -70,8 +70,9 @@ module Sessions
       return if @session.portfolio.present?
 
       @session.create_portfolio!(
-        candidate_id:      @session.candidate_id,
-        generation_status: 'pending'
+        candidate_id:            @session.candidate_id,
+        generation_status:       'pending',
+        generation_requested_at: Time.current
       )
     end
 

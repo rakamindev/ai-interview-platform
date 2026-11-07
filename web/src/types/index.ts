@@ -45,6 +45,7 @@ export interface Session {
   ended_at?: string;
   duration_seconds?: number;
   created_at?: string;
+  coverage_missing?: boolean;
 }
 
 export interface CoverageSkill {
@@ -81,6 +82,8 @@ export interface Portfolio {
   generation_status: "pending" | "generating" | "complete" | "failed";
   generated_at?: string;
   generation_error?: string;
+  processing_delayed: boolean;
+  coverage_missing: boolean;
   skills: PortfolioSkill[];
   overrides: AssessorOverride[];
 }

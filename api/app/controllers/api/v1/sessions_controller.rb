@@ -11,7 +11,7 @@ module Api
       # GET /api/v1/assessments/:assessment_id/sessions
       def index
         assessment = Assessment.find(params[:assessment_id])
-        sessions = assessment.sessions.order(created_at: :desc)
+        sessions = assessment.sessions.includes(:portfolio, :coverage_maps).order(created_at: :desc)
 
         json_response(sessions: sessions.map(&method(:session_json)))
       rescue ActiveRecord::RecordNotFound
@@ -176,7 +176,8 @@ module Api
           started_at:       session.started_at,
           ended_at:         session.ended_at,
           duration_seconds: session.duration_seconds,
-          created_at:       session.created_at
+          created_at:       session.created_at,
+          coverage_missing: session.coverage_missing?
         }
       end
 

@@ -45,6 +45,12 @@ RSpec.describe Sessions::EndHandler do
     expect(session.reload).to be_ended
   end
 
+  it 'records when generation was requested, so the wait survives page refreshes' do
+    described_class.new(session).call(reason: 'all_covered')
+
+    expect(session.reload.portfolio.generation_requested_at).to be_within(1.minute).of(Time.current)
+  end
+
   it 'enqueues a single portfolio when two callers race with stale records' do
     stale_copy = Session.unscoped.find(session.id)
 

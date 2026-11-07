@@ -11,7 +11,8 @@ module Api
       # GET /api/v1/sessions/:id/portfolio
       def show
         if @portfolio.nil? || @portfolio.generating?
-          return render json: { status: "generating" }, status: :accepted
+          return render json: { status: "generating", processing_delayed: @portfolio&.processing_delayed? || false },
+                        status: :accepted
         end
 
         if @portfolio.failed?
@@ -40,7 +41,7 @@ module Api
           return json_error("The candidate did not answer any questions, so there is nothing to assess", :unprocessable_entity)
         end
 
-        portfolio.update!(generation_status: "pending", generation_error: nil)
+        portfolio.update!(generation_status: "pending", generation_error: nil, generation_requested_at: Time.current)
         PortfolioGeneratorWorker.perform_async(@session.id)
 
         json_response(
@@ -171,6 +172,8 @@ module Api
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
+          processing_delayed: portfolio.processing_delayed?,
+          coverage_missing:  portfolio.session.coverage_missing?,
           skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
