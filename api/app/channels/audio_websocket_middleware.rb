@@ -9,7 +9,8 @@ class AudioWebSocketMiddleware
 
   MAX_RECONNECT_ATTEMPTS = 3
   RECONNECT_BACKOFF = [1, 2, 4].freeze
-  BROWSER_GRACE_PERIOD = 120 # seconds to keep Gemini alive after browser disconnects
+  BROWSER_GRACE_PERIOD = ENV.fetch('BROWSER_GRACE_PERIOD', 120).to_i # seconds to keep Gemini alive after browser disconnects
+  OWNERSHIP_CHECK_INTERVAL = 2 # seconds; how long a replaced connection can keep its Gemini client open
   PROACTIVE_RECONNECT_AFTER = ENV.fetch('PROACTIVE_RECONNECT_AFTER', 510).to_i
   PROACTIVE_RECONNECT_JITTER = 30  # randomise to avoid thundering herd
 
@@ -56,9 +57,21 @@ class AudioWebSocketMiddleware
     end
 
     state.session = session
+
+    unless session.claim_audio_connection!(state.connection_id)
+      report_session_already_ended(browser_ws, session)
+      return
+    end
+
+    start_ownership_watch(browser_ws, state)
     connect_to_gemini(browser_ws, state)
   rescue StandardError => e
     Rails.logger.error("[AudioWS] Exception in on:open: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
+    browser_ws.close
+  end
+
+  def report_session_already_ended(browser_ws, session)
+    send_json(browser_ws, type: 'session_ended', reason: session.end_reason)
     browser_ws.close
   end
 
@@ -93,6 +106,8 @@ class AudioWebSocketMiddleware
   def handle_browser_close(event, browser_ws, state, session_id)
     Rails.logger.info("[AudioWS] Browser disconnected: session=#{session_id} code=#{event.code}")
     state.browser_disconnected_at = Time.current
+    return if state.retired || !state.session
+
     state.proactive_reconnect_timer&.cancel
 
     # Keep Gemini alive during grace period in case candidate reconnects via page refresh.
@@ -111,7 +126,7 @@ class AudioWebSocketMiddleware
       return
     end
 
-    Sessions::StartHandler.new(session).call unless session.active?
+    Sessions::StartHandler.new(session).call(connection_id: state.connection_id) unless session.active?
 
     state.turn_counter = session.transcript_turns.maximum(:turn_number).to_i
 
@@ -384,7 +399,10 @@ class AudioWebSocketMiddleware
       schedule_gemini_reconnect(browser_ws, state, code)
     else
       Rails.logger.error("[AudioWS] Gemini reconnection failed after #{MAX_RECONNECT_ATTEMPTS} attempts")
-      Sessions::EndHandler.new(state.session).call(reason: 'error')
+      Sessions::EndHandler.new(state.session).call(reason: 'error', connection_id: state.connection_id)
+      return unless state.session.ended? # replaced by a newer connection; the ownership watch retires this one
+
+      shutdown_connection(state)
       send_json(browser_ws, type: 'session_ended', reason: 'error',
                             message: 'The session encountered a problem. Please contact the interviewer.')
       browser_ws.close
@@ -406,7 +424,7 @@ class AudioWebSocketMiddleware
     expected_client = state.gemini_client
     EM.add_timer(backoff) do
       next unless state.gemini_client.equal?(expected_client)
-      next if state.session.ended?
+      next if state.retired
 
       state.gemini_client&.supersede!
       build_gemini_client(browser_ws, state)
@@ -416,6 +434,8 @@ class AudioWebSocketMiddleware
   end
 
   def handle_browser_message(data, browser_ws, state)
+    return if state.retired
+
     message = JSON.parse(data)
 
     case message['type']
@@ -427,13 +447,10 @@ class AudioWebSocketMiddleware
         old_client&.close
       end
     when 'end_session'
-      state.proactive_reconnect_timer&.cancel
-      state.graceful_end_timer&.cancel
-      state.time_ceiling_timer&.cancel
-      state.coverage_end_timer&.cancel
-      Sessions::EndHandler.new(state.session).call(reason: 'manual_candidate')
+      # Shut down first, so no timer of this connection can act while the session ends.
+      shutdown_connection(state)
+      Sessions::EndHandler.new(state.session).call(reason: 'manual_candidate', connection_id: state.connection_id)
       send_json(browser_ws, type: 'session_ended', reason: 'manual_candidate')
-      state.gemini_client&.close
       browser_ws.close
     end
   rescue JSON::ParserError
@@ -502,13 +519,16 @@ class AudioWebSocketMiddleware
     return unless state.session
 
     state.graceful_end_timer = EM::Timer.new(BROWSER_GRACE_PERIOD) do
+      next if state.retired
+
+      # Either this connection was replaced or the session is ending: Gemini is not needed in both cases.
+      shutdown_connection(state)
+
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          next if state.session.reload.ended?
-
-          Rails.logger.info("[AudioWS] Grace period expired — ending session #{state.session.id}")
-          Sessions::EndHandler.new(state.session).call(reason: 'error')
-          EM.schedule { state.gemini_client&.close }
+          Rails.logger.info("[AudioWS] Grace period expired for session #{state.session.id}")
+          # Fenced: a reconnect that claimed the session after the last ownership check keeps it alive.
+          Sessions::EndHandler.new(state.session).call(reason: 'error', connection_id: state.connection_id)
         end
       rescue StandardError => e
         Rails.logger.error("[AudioWS] Thread crashed (graceful end): #{e.class}: #{e.message}")
@@ -516,19 +536,76 @@ class AudioWebSocketMiddleware
     end
   end
 
-  # Sends session_ended then closes both connections; 300ms delay lets the frontend process the JSON
-  # before the close event fires, otherwise it shows the reconnection UI instead of the complete screen.
-  def close_session_after_end(browser_ws, state, reason:)
-    EM.schedule do
-      send_json(browser_ws, type: 'session_ended', reason: reason)
-      state.gemini_client&.close
-      EM.add_timer(0.3) do
-        begin
-          browser_ws.close
-        rescue StandardError
-          nil
+  # Polls the database because the connection that replaces this one may live in another Puma worker.
+  def start_ownership_watch(browser_ws, state)
+    state.ownership_timer = EM::PeriodicTimer.new(OWNERSHIP_CHECK_INTERVAL) do
+      check_ownership(browser_ws, state)
+    end
+  end
+
+  def check_ownership(browser_ws, state)
+    return if state.ownership_check_running || state.retired
+
+    state.ownership_check_running = true
+    Thread.new do
+      owner, status, end_reason = ActiveRecord::Base.connection_pool.with_connection do
+        Session.unscoped.where(id: state.session.id).pick(:active_connection_id, :status, :end_reason)
+      end
+
+      EM.schedule do
+        state.ownership_check_running = false
+        next if state.retired
+
+        if status == 'ended'
+          Rails.logger.info("[AudioWS] Session #{state.session.id} ended elsewhere — closing connection")
+          close_session_after_end(browser_ws, state, reason: end_reason)
+        elsif owner != state.connection_id
+          retire_replaced_connection(browser_ws, state)
         end
       end
+    rescue StandardError => e
+      state.ownership_check_running = false
+      Rails.logger.error("[AudioWS] Ownership check failed: #{e.class}: #{e.message}")
+    end
+  end
+
+  def retire_replaced_connection(browser_ws, state)
+    Rails.logger.info("[AudioWS] Connection replaced — retiring old connection for session #{state.session.id}")
+    shutdown_connection(state)
+    send_json(browser_ws, type: 'session_superseded')
+    close_browser_after_delivery(browser_ws)
+  end
+
+  # Makes this connection inert: no timer can act for the session and Gemini is closed.
+  def shutdown_connection(state)
+    state.retired = true
+    state.ending_scheduled = true
+    [state.proactive_reconnect_timer, state.graceful_end_timer, state.time_ceiling_timer,
+     state.coverage_end_timer, state.ownership_timer].each { |timer| timer&.cancel }
+
+    client = state.gemini_client
+    client&.supersede!
+    client&.close
+  end
+
+  # 300ms delay lets the frontend process the last JSON message before the close event fires,
+  # otherwise it shows the reconnection UI instead of the final screen.
+  def close_browser_after_delivery(browser_ws)
+    EM.add_timer(0.3) do
+      begin
+        browser_ws.close
+      rescue StandardError
+        nil
+      end
+    end
+  end
+
+  # Sends session_ended then closes both connections.
+  def close_session_after_end(browser_ws, state, reason:)
+    EM.schedule do
+      shutdown_connection(state)
+      send_json(browser_ws, type: 'session_ended', reason: reason)
+      close_browser_after_delivery(browser_ws)
     end
   end
 
@@ -605,7 +682,7 @@ class AudioWebSocketMiddleware
             close_session_after_end(browser_ws, state, reason: 'all_covered')
           elsif attempts >= max_attempts
             Rails.logger.warn("[AudioWS] audio_complete poll timed out — ending session #{session.id} directly")
-            Sessions::EndHandler.new(session).call(reason: 'all_covered')
+            Sessions::EndHandler.new(session).call(reason: 'all_covered', connection_id: state.connection_id)
             close_session_after_end(browser_ws, state, reason: 'all_covered')
           else
             EM.schedule { poll_for_session_end(browser_ws, state, session, attempts: attempts + 1) }
@@ -689,7 +766,7 @@ class AudioWebSocketMiddleware
         ActiveRecord::Base.connection_pool.with_connection do
           next if session.reload.ended?
 
-          Sessions::EndHandler.new(session).call(reason: 'time_ceiling')
+          Sessions::EndHandler.new(session).call(reason: 'time_ceiling', connection_id: state.connection_id)
           close_session_after_end(browser_ws, state, reason: 'time_ceiling')
         end
       rescue StandardError => e
@@ -770,7 +847,9 @@ class AudioWebSocketMiddleware
 
   # Per-connection state shared across callbacks.
   class ConnectionState
+    attr_reader :connection_id
     attr_accessor :session, :gemini_client, :turn_counter,
+                  :ownership_timer, :ownership_check_running, :retired,
                   :reconnect_attempts, :browser_disconnected_at,
                   :proactive_reconnect_timer,
                   :latest_resumption_token,
@@ -786,6 +865,8 @@ class AudioWebSocketMiddleware
                   :waiting_for_candidate_response
 
     def initialize
+      @connection_id = SecureRandom.uuid
+      @retired = false
       @turn_counter = 0
       @reconnect_attempts = 0
       @reconnecting = false

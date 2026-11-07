@@ -26,6 +26,17 @@ class Session < ApplicationRecord
   def ended?   = status == 'ended'
   def pending? = status == 'pending'
 
+  # Makes connection_id the only audio connection allowed to act for this session.
+  # Takes the row lock so it cannot interleave with EndHandler. Returns false if the session already ended.
+  def claim_audio_connection!(connection_id)
+    with_lock do
+      next false if ended?
+
+      update_column(:active_connection_id, connection_id)
+      true
+    end
+  end
+
   def invite_url
     "#{Rails.configuration.x.web_base_url}/interview/#{invite_token}"
   end
