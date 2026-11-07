@@ -150,3 +150,13 @@ These are source-confirmed limits, not new browser executions or changes to the 
 - **Review flag can clear automatically:** when an orphan's exact skill returns at the originally seen AI level (without conflicting history), carry-forward reattaches it and clears `needs_review` without acknowledgement; this is "reason resolved" behavior, while the product rule for human acknowledgement remains undecided.
 
 "Flagged" for a missing skill therefore means shown as an earlier decision, not an in-page resolution workflow. Latest supplied raw Claude gate output at docs HEAD `fcf6619` / app `2801058`: [council-round2-gates-claude-raw.txt](evidence/council-round2-gates-claude-raw.txt). The earlier Claude gate file remains explicitly a summary. No new application/spec/config changes are part of this docs round.
+
+## Farros’s own walkthrough — 7 Nov 2026
+
+F1–F3 were found in Farros's own walkthrough, 7 Nov, on synthetic session 22. They are additional UX findings, outside the historical 56-finding/original-code P0 denominator. Fixed in `1e29ecd`; independently checked by Claude before fast-forward merge. [Agent browser measurements and gates](evidence/walkthrough-ux-check.md): portfolio and fit/gap at 375×812 and 1280×812, scrollWidth equals clientWidth; 112 RSpec examples/0 failures, 29 Vitest tests passed, TypeScript/build passed.
+
+| ID | Class | Reproduction / observed problem | Status / correction |
+|---|---|---|---|
+| F1 | UX defect | Open a portfolio skill: the decision action was a small teal text link below the evidence, hard to find. | ✅ Fixed: `SkillRow.tsx` shows an outlined pencil button next to the decision record, inside the opened skill. Change decision / Set your level / Set level; flagged Keep/Change controls retained. |
+| F2 | UX defect | Scroll to portfolio actions: vacancy comparison, PDF, JSON and transcript were mixed in one row. | ✅ Fixed: `PortfolioPage.tsx` separates Compare with a role from Share or check the source; comparison has helper text and a primary action enabled after vacancy selection. |
+| F3 | Responsive defect | Open fit/gap at phone width: title and actions competed in a non-wrapping header. | ✅ Fixed: `FitGapReportPage.tsx` stacks the header and wraps buttons on mobile; desktop remains one row. Existing comparison table scroll wrapper retained. |
