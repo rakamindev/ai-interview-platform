@@ -91,8 +91,10 @@ Every problem found in the original code, with its evidence and its current stat
 | W23 | P2 | Spec gap | The time limit is only a ceiling; a skill counts as "covered" after 2 probes, so a 45-minute assessment ended in 3 minutes | 📤 |
 | W24 | P2 | Spec gap | Silence-based turn-taking favours one talking style | 📤 |
 
-## Found by checking where earlier PRs reported problems (verified in this repo; no code read or copied)
-Earlier PR **titles** pointed us at these areas. Each one was then verified independently in this codebase. If we fix one, the PR that pointed us there is credited.
+## External investigation leads (credited)
+On 6 Nov, Farros asked the AI agent to check the existing public PRs in this repository to see which areas were already covered. The agent read PR titles and metadata, short description excerpts from #148, #60, #21 and #214 (filtered for "grace"/"reconnect"), and the opening of #240's description. The session transcripts show no access to any PR's code or diffs. The issues below were then verified in this codebase; where we fixed one, the PR that pointed us there is credited.
+
+**W27 (duplicate skills):** the problem lead came from #148's description. It was reproduced here (`evidence/w27-repro.txt`), and our own setup-time validation was implemented without reference to #148's implementation.
 
 | ID | Sev | Type | Finding (verified here) | Pointed to by | Status |
 |---|---|---|---|---|---|
