@@ -47,7 +47,7 @@ function SessionRow({
           <div className="text-sm font-medium">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
-              Invitation created at {new Date(session.started_at).toLocaleString()}
+              Candidate interview started at: {new Date(session.started_at).toLocaleString()}
             </div>
           )}
         </div>

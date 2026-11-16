@@ -169,7 +169,7 @@ export default function PortfolioPage() {
       {/* Failed state */}
       {!generating && portfolio?.generation_status === "failed" && (
         <div className="border border-destructive/40 rounded-lg p-6 text-center space-y-3">
-          <p className="text-sm text-destructive">Portfolio generation failed.</p>
+          <p className="text-sm text-destructive">Portfolio generation failed. Something went wrong</p>
           <Button
             variant="outline"
             size="sm"
