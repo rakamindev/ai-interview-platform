@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -27,6 +27,7 @@ import { ArrowLeft, Plus, Loader2 } from "lucide-react";
 import { assessmentsApi } from "@/services/assessments";
 import { TIME_LIMIT_OPTIONS } from "@/utils/constants";
 import type { AssessmentSkill } from "@/types";
+import { getStoredUser } from "@/stores/authAtom";
 
 export interface AssessmentFormValues {
   name: string;
@@ -40,7 +41,18 @@ export default function AssessmentNewPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const user = getStoredUser()
+  const canCreateAssessment = 
+     ["admin", "assessor", "hr_manager"].includes(user?.role ?? '')
+  useEffect(() => {
+    if (!canCreateAssessment) {
+      navigate("/assessments", { replace: true });
+    }
+  }, [canCreateAssessment, navigate]);
 
+  if (!canCreateAssessment) {
+    return null;
+  }
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
       name: "",
