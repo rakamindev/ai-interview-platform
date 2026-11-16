@@ -26,7 +26,7 @@ export default function LoginPage() {
       saveToken(token);
       saveUserData(JSON.stringify(res.data.user))
       setAuth({ token, user: res.data.user });
-      navigate("/assessments");
+      navigate("/hr/dashboard");
     } catch {
       setError("Invalid email or password.");
     } finally {
