@@ -306,7 +306,7 @@ export default function AssessmentInvitePage() {
                 <SessionRow
                   key={session.id}
                   session={session}
-                  index={sessions.length - i}
+                  index={i+1}
                   assessmentId={id!}
                   onCopy={(sid) => {
                     const s = sessions.find((x) => x.id === sid);
