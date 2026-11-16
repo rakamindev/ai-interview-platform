@@ -1,7 +1,12 @@
 # frozen_string_literal: true
+require 'simplecov'
 
-RSpec.configure do |config|
-  config.expect_with(:rspec) { |expectations| expectations.include_chain_clauses_in_custom_matcher_descriptions = true }
-  config.mock_with(:rspec) { |mocks| mocks.verify_partial_doubles = true }
-  config.shared_context_metadata_behavior = :apply_to_host_groups
+SimpleCov.start 'rails' do
+  enable_coverage :branch
+
+  add_filter '/spec/'
+  add_filter '/config/'
+  add_filter '/db/'
+
+  minimum_coverage line: 0
 end

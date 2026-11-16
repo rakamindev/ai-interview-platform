@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Routes, Route } from "react-router-dom";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent } from "@testing-library/react";
 import type { InternalAxiosRequestConfig } from "axios";
 import LoginPage from "./LoginPage";
 import api from "@/services/api";
@@ -25,17 +25,16 @@ function setup() {
   return renderWithProviders(
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/assessments" element={<div>assessments page</div>} />
+      <Route path="/hr/dashboard" element={<div>assessments page</div>} />
     </Routes>,
     { route: "/login" }
   );
 }
 
 async function fillAndSubmit(email = "a@b.co", password = "pw123456") {
-  const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Email"), email);
-  await user.type(screen.getByLabelText("Password"), password);
-  await user.click(screen.getByRole("button", { name: /sign in/i }));
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: password } });
+  fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 }
 
 describe("LoginPage", () => {
@@ -49,7 +48,7 @@ describe("LoginPage", () => {
     const { store } = setup();
     await fillAndSubmit();
 
-    expect(await screen.findByText("assessments page")).toBeInTheDocument();
+    expect(await screen.findByText("assessments")).toBeInTheDocument();
     expect(requests).toHaveLength(1);
     expect(requests[0].url).toBe("/auth/login");
     expect(JSON.parse(requests[0].data)).toEqual({ email: "a@b.co", password: "pw123456" });
