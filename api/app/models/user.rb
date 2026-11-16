@@ -3,8 +3,8 @@
 class User < ApplicationRecord
   has_secure_password
 
-  ROLES = %w[admin user assessor recruiter hr-manager].freeze
-  LOGIN_ROLES = %w[admin assessor recruiter hr-manager].freeze
+  ROLES = %w[admin user assessor recruiter hr_manager].freeze
+  LOGIN_ROLES = %w[admin assessor recruiter hr_manager].freeze
   validates :email, presence: true,
   uniqueness: { case_sensitive: false },
   format: { with: URI::MailTo::EMAIL_REGEXP }
