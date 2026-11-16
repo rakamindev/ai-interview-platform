@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { assessmentsApi } from "@/services/assessments";
 import { Plus, Clock, ChevronRight } from "lucide-react";
 import type { Assessment } from "@/types";
+import { getStoredUser } from "@/stores/authAtom";
 
 function SessionSummary({ session }: { session?: Assessment["latest_session"] }) {
   if (!session) return null;
@@ -32,7 +33,9 @@ export default function AssessmentListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
-
+  const user = getStoredUser()
+  const canCreateAssessment = 
+     ["admin", "assessor", "hr_manager"].includes(user?.role ?? '')
   useEffect(() => {
     assessmentsApi
       .list()
@@ -45,9 +48,11 @@ export default function AssessmentListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Assessments</h1>
-        <Button onClick={() => navigate("/assessments/new")}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Assessment
-        </Button>
+        {canCreateAssessment && (
+          <Button onClick={() => navigate("/assessments/new")}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Assessment
+          </Button>
+        )}
       </div>
 
       {error && (

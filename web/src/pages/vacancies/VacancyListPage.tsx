@@ -6,12 +6,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { vacanciesApi } from "@/services/vacancies";
 import { Plus, Briefcase, ChevronRight } from "lucide-react";
 import type { Vacancy } from "@/types";
+import { getStoredUser } from "@/stores/authAtom";
 
 export default function VacancyListPage() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const navigate = useNavigate();
+  const user = getStoredUser()
+  const canCreateVacancies = ["admin", "recruiter", "hr_manager"].includes(user?.role ?? '')
 
   useEffect(() => {
     vacanciesApi.list()
@@ -24,9 +27,11 @@ export default function VacancyListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Vacancies</h1>
+        {canCreateVacancies && (
         <Button onClick={() => navigate("/vacancies/new")}>
           <Plus className="h-4 w-4 mr-1.5" /> New Vacancy
         </Button>
+        )}
       </div>
 
       {error && (

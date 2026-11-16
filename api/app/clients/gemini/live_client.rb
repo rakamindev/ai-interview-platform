@@ -13,10 +13,12 @@ module Gemini
     GATE_OPEN_DELAY    = 0.8 # delay opening mic gate so frontend audio buffer drains and avoids echo loop
 
     # Silence pump: synthetic silent PCM frames sent during browser silence so Gemini's VAD detects end-of-speech.
-    SILENCE_PUMP_DELAY    = 1
+    SILENCE_PUMP_DELAY = 1.5
     SILENCE_PUMP_INTERVAL = 0.03
     SILENCE_FRAME_SAMPLES = 640
     SILENCE_FRAME = ("\x00" * (SILENCE_FRAME_SAMPLES * 2)).freeze
+
+    VOICE_RMS_THRESHOLD = 500
 
     attr_reader :resumption_token, :connected, :connected_at, :inactivity_close
 
@@ -77,13 +79,26 @@ module Gemini
       @ws
     end
 
+    def voice_frame?(pcm_bytes)
+      samples = pcm_bytes.unpack('s<*')
+      return false if samples.empty?
+
+      Math.sqrt(samples.sum { |s| s * s } / samples.size.to_f) >= VOICE_RMS_THRESHOLD
+    end
+
     # Sends raw PCM audio bytes to Gemini Live as realtimeInput.
     def send_audio(pcm_bytes)
       return unless @connected && @ws
 
       ensure_inactivity_watchdog
       track_audio_forwarded(pcm_bytes)
-      schedule_silence_pump
+
+      if voice_frame?(pcm_bytes)
+        @user_spoke = true
+        schedule_silence_pump # resets stop + timer, so the window restarts on every voiced frame
+      elsif @silence_pumping
+        return # the pump is already supplying silence, so don't double-feed
+      end
 
       @ws.send(audio_message(pcm_bytes))
     end
@@ -198,7 +213,8 @@ module Gemini
 
     # Verifies real silence elapsed since last audio frame; reschedules if audio arrived during the timer window.
     def check_silence_pump_ready
-      return if @silence_pumping || !@connected || !@ws || @superseded || !@last_real_audio_at || @model_emitting_audio
+      return if @silence_pumping || !@connected || !@ws || @superseded ||
+                !@last_real_audio_at || @model_emitting_audio || !@user_spoke
 
       elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - @last_real_audio_at
       remaining = SILENCE_PUMP_DELAY - elapsed
@@ -217,8 +233,9 @@ module Gemini
       return if @silence_pumping || !@connected || !@ws || @model_emitting_audio
 
       @silence_pumping = true
-      Rails.logger.info('[Gemini::LiveClient] Silence pump started — no real audio for 500ms')
-
+      @user_spoke = false # turn handed over, so don't re-trigger until the user speaks again
+      Rails.logger.info("[Gemini::LiveClient] Silence pump started — no voice for #{SILENCE_PUMP_DELAY}s")
+      
       silence_msg = {
         realtimeInput: {
           audio: {
@@ -322,6 +339,12 @@ module Gemini
           outputAudioTranscription: {},
           contextWindowCompression: {
             slidingWindow: {}
+          },
+          realtimeInputConfig: {
+            automaticActivityDetection: {
+              endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+              silenceDurationMs: 1000
+            }
           }
         }
       }

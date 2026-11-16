@@ -36,6 +36,41 @@ TEST_ORG = {
   host:       "localhost"
 }.freeze
 
+User.find_or_initialize_by(email: 'admin@example.com').tap do |user|
+  user.password = 'test123456'
+  user.password_confirmation = 'test123456'
+  user.role = 'admin'
+  user.save!
+end
+
+User.find_or_initialize_by(email: 'assessor@example.com').tap do |user|
+  user.password = 'test123456'
+  user.password_confirmation = 'test123456'
+  user.role = 'assessor'
+  user.save!
+end
+
+User.find_or_initialize_by(email: 'recruiter@example.com').tap do |user|
+  user.password = 'test123456'
+  user.password_confirmation = 'test123456'
+  user.role = 'recruiter'
+  user.save!
+end
+
+User.find_or_initialize_by(email: 'hr-manager@example.com').tap do |user|
+  user.password = 'test123456'
+  user.password_confirmation = 'test123456'
+  user.role = 'hr_manager'
+  user.save!
+end
+
+User.find_or_initialize_by(email: 'user@example.com').tap do |user|
+  user.password = 'test123456'
+  user.password_confirmation = 'test123456'
+  user.role = 'user'
+  user.save!
+end
+
 ActiveRecord::Base.connection.execute(<<~SQL)
   CREATE TABLE IF NOT EXISTS public.organizations (
     id          BIGSERIAL PRIMARY KEY,

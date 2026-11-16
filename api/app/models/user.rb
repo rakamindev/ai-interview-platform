@@ -3,17 +3,21 @@
 class User < ApplicationRecord
   has_secure_password
 
-  ROLES = %w[admin user].freeze
-
+  ROLES = %w[admin user assessor recruiter hr_manager].freeze
+  LOGIN_ROLES = %w[admin assessor recruiter hr_manager].freeze
   validates :email, presence: true,
-                    uniqueness: { case_sensitive: false },
-                    format: { with: URI::MailTo::EMAIL_REGEXP }
+  uniqueness: { case_sensitive: false },
+  format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :role, inclusion: { in: ROLES }
-
+  
   before_save :downcase_email
-
+  def can_login?
+    LOGIN_ROLES.include?(role)
+  end
+  
   private
-
+  
+  
   def downcase_email
     self.email = email.downcase
   end

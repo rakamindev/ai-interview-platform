@@ -26,8 +26,8 @@ export default function SignupPage() {
       const res = await authApi.signup({ email, password, role });
       const token = res.data.token;
       saveToken(token);
-      setAuth({ token });
-      navigate("/assessments");
+      setAuth({ token, user: res.data.user });
+      navigate("/hr/dashboard");
     } catch {
       setError("Signup failed. Please try again.");
     } finally {

@@ -17,7 +17,7 @@ import { assessmentsApi } from "@/services/assessments";
 import { LEVEL_LABELS } from "@/utils/constants";
 import { ArrowLeft, Copy, Check, Eye, Pencil, Clock, Plus, UserRound } from "lucide-react";
 import type { Assessment, Session } from "@/types";
-
+import { getStoredUser } from "@/stores/authAtom";
 function SessionRow({
   session,
   index,
@@ -47,7 +47,7 @@ function SessionRow({
           <div className="text-sm font-medium">{displayName}</div>
           {session.started_at && (
             <div className="text-xs text-muted-foreground">
-              {new Date(session.started_at).toLocaleDateString()}
+              Candidate interview started at: {new Date(session.started_at).toLocaleString()}
             </div>
           )}
         </div>
@@ -132,6 +132,9 @@ export default function AssessmentInvitePage() {
   const [newSessionCopied, setNewSessionCopied] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [candidateNameInput, setCandidateNameInput] = useState("");
+  const user = getStoredUser()
+  const canInviteCandidate = 
+     ["admin", "recruiter", "hr_manager"].includes(user?.role ?? '')
 
   const loadSessions = useCallback(async () => {
     const res = await assessmentsApi.getSessions(Number(id));
@@ -219,10 +222,13 @@ export default function AssessmentInvitePage() {
           <Button variant="outline" size="sm" onClick={() => navigate(`/assessments/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
-          <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            {creatingSession ? "Creating..." : "Invite Candidate"}
-          </Button>
+          {canInviteCandidate && (
+            <Button size="sm" onClick={openInviteDialog} disabled={creatingSession}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              {creatingSession ? "Creating..." : "Invite Candidate"}
+            </Button>
+          )}
+          
         </div>
       </div>
 
@@ -306,7 +312,7 @@ export default function AssessmentInvitePage() {
                 <SessionRow
                   key={session.id}
                   session={session}
-                  index={sessions.length - i}
+                  index={i+1}
                   assessmentId={id!}
                   onCopy={(sid) => {
                     const s = sessions.find((x) => x.id === sid);

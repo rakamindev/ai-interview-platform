@@ -26,6 +26,9 @@ module Api
 
       # POST /api/v1/assessments
       def create
+        if current_user&.role == "assessor"
+          json_error("Unauthorized", :unauthorized)
+        end
         assessment = Assessment.new(assessment_params)
         assessment.created_by = current_user.id
 

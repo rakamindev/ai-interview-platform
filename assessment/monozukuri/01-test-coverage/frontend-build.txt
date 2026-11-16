@@ -1,0 +1,16 @@
+
+> ai-interview-web@0.0.0 build
+> tsc && vite build
+
+vite v6.4.6 building for production...
+transforming...
+✓ 1845 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                         0.63 kB │ gzip:  0.33 kB
+dist/assets/index-DdLJ-YZ-.css         33.77 kB │ gzip:  6.79 kB
+dist/assets/vendor-ui-BxhV_wRT.js     104.61 kB │ gzip: 35.42 kB
+dist/assets/vendor-misc-C7Ww1rh7.js   129.59 kB │ gzip: 45.01 kB
+dist/assets/vendor-react-h55suRzX.js  181.45 kB │ gzip: 59.79 kB
+dist/assets/index-CVrjK5kr.js         194.67 kB │ gzip: 54.84 kB
+✓ built in 5.09s
