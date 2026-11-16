@@ -1,13 +1,13 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { useAtomValue, useSetAtom } from "jotai";
 import { tenantAtom } from "@/stores/tenantAtom";
 import { authAtom, clearToken } from "@/stores/authAtom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, ClipboardList, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Briefcase, LogOut, ChartNoAxesCombined } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation } from "react-router-dom";
 
 const navItems = [
+  { href: "/hr/dashboard", label: "Overview", icon: ChartNoAxesCombined },
   { href: "/assessments", label: "Assessments", icon: ClipboardList },
   { href: "/vacancies", label: "Vacancies", icon: Briefcase },
 ];
@@ -26,11 +26,10 @@ export default function AssessorLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Top header */}
       <header className="border-b bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/assessments" className="flex items-center gap-2">
+            <Link to="/hr/dashboard" className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Rakamin AI Interview</span>
             </Link>
@@ -65,8 +64,6 @@ export default function AssessorLayout() {
           </div>
         </div>
       </header>
-
-      {/* Page content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
         <Outlet />
       </main>
