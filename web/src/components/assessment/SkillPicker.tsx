@@ -38,11 +38,12 @@ export default function SkillPicker({ open, onOpenChange, onSelect }: SkillPicke
 
   const handleSelect = (s: SkillTaxonomy) => {
     onSelect({
-      skill_id: undefined,
+      skill_id: s.skill_id,
       skill_label: s.skill_label,
       is_custom: false,
       expected_level: 3,
       scope_include: s.scope_include,
+      scope_exclude: s.scope_exclude,
       l1_anchor: s.l1_anchor,
       l2_anchor: s.l2_anchor,
       l3_anchor: s.l3_anchor,

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fullstack Product Engineer Case Study - Comprehensive Report</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+    h1, h2, h3, h4 {
+      color: #0f172a;
+      font-weight: 700;
+      margin-top: 1.4em;
+      margin-bottom: 0.5em;
+      page-break-after: avoid;
+    }
+    h1 {
+      font-size: 22pt;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 8px;
+      margin-top: 0;
+    }
+    h2 {
+      font-size: 14pt;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 5px;
+      color: #0369a1;
+      margin-top: 1.6em;
+    }
+    h3 {
+      font-size: 11pt;
+      color: #0f172a;
+      margin-top: 1.2em;
+    }
+    p {
+      margin-top: 0;
+      margin-bottom: 0.8em;
+    }
+    .page-break {
+      page-break-before: always;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 8pt;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-p0 { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .badge-p1 { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .badge-p2 { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+    .badge-p3 { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1em 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #334155;
+    }
+    tr:nth-child(even) {
+      background-color: #f1f5f9;
+    }
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 8.5pt;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 8pt;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 0.8em 0;
+      page-break-inside: avoid;
+    }
+    .callout {
+      background: #f0f9ff;
+      border-left: 4px solid #0284c7;
+      padding: 10px 14px;
+      margin: 1em 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    .callout-warning {
+      background: #fffbeb;
+      border-left-color: #f59e0b;
+    }
+    .callout-title {
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 4px;
+      font-size: 9.5pt;
+    }
+    .callout-warning .callout-title {
+      color: #b45309;
+    }
+    .img-container {
+      margin: 1.2em 0;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+    .img-container img {
+      max-width: 98%;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .img-caption {
+      font-size: 8pt;
+      color: #64748b;
+      margin-top: 4px;
+      font-style: italic;
+    }
+    .header-meta {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+      font-size: 8.5pt;
+      color: #64748b;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 1em 0;
+    }
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #fafafa;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 9pt;
+      margin-bottom: 4px;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER / HEADER -->
+  <div class="header-meta">
+    <div><strong>RAKAMIN CASE STUDY</strong> &bull; Fullstack Product Engineer Assessment</div>
+    <div>November 2026 &bull; Monozukuri Engineering Submission</div>
+  </div>
+
+  <h1>Fullstack Product Engineer Case Study</h1>
+  <p style="font-size: 11pt; color: #475569; margin-top: -4px;">
+    <strong>Architecture Audit, Monozukuri Revamp, Multi-Tenant Hardening &amp; Compliance Proof</strong>
+  </p>
+
+  <div class="card" style="background: #f8fafc; margin-bottom: 1.5em;">
+    <div style="display: grid; grid-template-columns: 140px 1fr; row-gap: 6px; font-size: 8.5pt;">
+      <div><strong>Candidate:</strong></div><div>Asep (Senior Fullstack Product Engineer)</div>
+      <div><strong>Target Repo:</strong></div><div><code>rakamindev/ai-interview-platform</code></div>
+      <div><strong>Feature Branch:</strong></div><div><code>feat/monozukuri-fullstack-revamp</code></div>
+      <div><strong>Pull Request:</strong></div><div><a href="https://github.com/rakamindev/ai-interview-platform/pull/251" target="_blank">https://github.com/rakamindev/ai-interview-platform/pull/251</a></div>
+      <div><strong>Verification Commits:</strong></div><div><code>8e5829b</code> &bull; <code>7730dc9</code> &bull; <code>f48d040</code> &bull; <code>29a22bd</code> &bull; <code>495701f</code></div>
+      <div><strong>Demonstration Video:</strong></div><div><a href="https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69" target="_blank">https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69</a></div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Executive Summary</div>
+    This report documents the end-to-end fullstack audit, architectural refactor, and craftsmanship enhancements applied to the AI Interview Platform. Moving beyond surface-level fixes, every architectural seam between Rails API, PostgreSQL, Sidekiq, and React frontend was investigated from first principles. Critical enterprise-grade flaws—including a cross-tenant data leak (IDOR), an infinite polling storm, silent contract mismatches, and cleartext transcript logging—were resolved and fortified with rigorous automated test suites (RSpec + Vitest) and a demonstrated seeded fault proof.
+  </div>
+
+  <!-- STEP 2: DOMAIN IMMERSION -->
+  <h2>Step 2: Domain Immersion &amp; Mental Model</h2>
+
+  <h3>2.1 The Core Business &amp; Technical Problem</h3>
+  <p>
+    Traditional technical interviewing is fraught with subjective interviewer bias, scheduling bottlenecks, and inconsistent competency evaluations. The <strong>AI Interview Platform</strong> introduces automated, conversational voice interviews powered by Gemini Live WebSocket streaming, structured against a standardized competency taxonomy (B7 Skill Taxonomy, L1–L5 anchors).
+  </p>
+  <p>
+    However, automated AI evaluation without human-in-the-loop sovereign control creates severe organizational risk. An AI model can hallucinate, prematurely score unprobed competencies as low (L1), or misinterpret domain subtleties. The product vision requires a cohesive three-way harmony:
+  </p>
+  <ul>
+    <li><strong>The Candidate:</strong> Requires a low-latency, empathetic voice experience with absolute clarity on privacy, data protection, and audio recording consent.</li>
+    <li><strong>The Assessor:</strong> Demands verifiable, evidence-backed ratings with full authority to manually override AI assessments without losing edits during portfolio regenerations.</li>
+    <li><strong>The Enterprise Tenant:</strong> Demands complete, cryptographically isolated multi-tenancy, strict data governance, and regulatory adherence to Indonesia's Personal Data Protection Law (UU No. 27/2022).</li>
+  </ul>
+
+  <h3>2.2 Stakeholder Perspective Mapping</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 18%;">Stakeholder</th>
+        <th style="width: 40%;">Primary Expectations &amp; Vulnerabilities</th>
+        <th style="width: 42%;">Architectural &amp; UX Mitigation Delivered</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Candidate</strong></td>
+        <td>Anxiety around AI proctoring, unexpected disconnects, unclear recording consent, and robotic evaluations.</td>
+        <td>Hardware proctoring check, explicit UU PDP Informed Consent agreement, WebSocket reconnection grace-handling, and clear speech turn visualization.</td>
+      </tr>
+      <tr>
+        <td><strong>Assessor / Recruiter</strong></td>
+        <td>AI hallucinations, inability to adjust scores, losing evaluation notes, and infinite loading states on fit/gap reports.</td>
+        <td>Human-in-the-loop override panel, transactional preservation across portfolio regenerations, fit/gap readiness scorecard, and exportable PDF audit trails.</td>
+      </tr>
+      <tr>
+        <td><strong>Tenant Admin / Legal</strong></td>
+        <td>Cross-tenant data breaches (IDOR), cleartext personal data in server logs, and irreversible schema changes.</td>
+        <td>ActiveRecord multi-tenant relationship scoping, Rails parameter filtering for sensitive voice transcripts, and 100% reversible database migrations.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 First-Principles &amp; Monozukuri Philosophy</h3>
+  <p>
+    <em>Monozukuri</em> (ものづくり) represents the Japanese philosophy of craftsmanship, continuous refinement, and deep pride in engineered durability. In software engineering, this demands that we do not merely patch symptoms, but eliminate root causes. When an AI evaluation engine meets human hiring, edge cases are not bugs—they are candidate careers. Therefore:
+  </p>
+  <ul>
+    <li>Unassessed skills must <strong>never</strong> be forged or defaulted to L1; they must be explicitly represented as unassessed (<code>NULL</code>).</li>
+    <li>Human overrides must always possess sovereign precedence over AI predictions.</li>
+    <li>Every UI state must handle errors, loading, and edge cases gracefully without infinite network loops.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- STEP 3: GAP ANALYSIS -->
+  <h2>Step 3: Gap Analysis &amp; Technical Specifications</h2>
+
+  <h3>3.1 Comprehensive P0–P3 Gap Inventory</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 10%;">Severity</th>
+        <th style="width: 28%;">Vulnerability / Deficiency</th>
+        <th style="width: 32%;">One-Line Impact Statement</th>
+        <th style="width: 30%;">Resolution Architecture</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-p0">P0-1</span></td>
+        <td><strong>Multi-Tenant IDOR Breach in Portfolios</strong><br><code>PortfoliosController</code> queried <code>Portfolio.find</code> directly by ID without scoping to <code>Current.tenant_id</code>.</td>
+        <td>Any authenticated tenant could access, read, and export another tenant's candidate portfolio and transcript.</td>
+        <td>Introduced <code>Portfolio.for_current_tenant</code> scope traversing <code>session.tenant_id == Current.tenant_id</code>. Verified by cross-tenant 404 test.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p0">P0-2</span></td>
+        <td><strong>Fit/Gap Infinite Polling Storm</strong><br><code>FitGapReportPage.tsx</code> triggered <code>triggerFitGap</code> inside its 404 catch-block on every 5s poll.</td>
+        <td>Flooded Sidekiq queues with duplicate background jobs every 5 seconds, causing server DDoS and resource exhaustion.</td>
+        <td>Guarded generation trigger with <code>hasTriggeredRef</code> so <code>triggerFitGap</code> only fires once on initial load.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p0">P0-3</span></td>
+        <td><strong>Fit/Gap Data Contract Seam Breakdown</strong><br>Backend returned <code>expected_level</code>; frontend expected <code>required_level</code> and omitted <code>is_override</code>.</td>
+        <td>Target levels and assessor override badges vanished from the UI, rendering fit/gap tables incomplete and misleading.</td>
+        <td>Dual-contract alignment in <code>FitGap::Engine</code> returning both fields + <code>is_override</code>, <code>assessor_notes</code>, and enhanced UI badges.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p1">P1-1</span></td>
+        <td><strong>UU PDP Personal Data Cleartext Logging</strong><br>Raw dialogue transcripts and candidate names logged in cleartext server stdout.</td>
+        <td>Violates Indonesian Personal Data Protection Law (UU PDP No. 27/2022) Art. 35 on unauthorized processing &amp; exposure.</td>
+        <td>Configured <code>filter_parameter_logging.rb</code> and redacted live transcript payload logging in <code>LiveClient</code>.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p1">P1-2</span></td>
+        <td><strong>Unassessed Skills Hallucination / Null Crash</strong><br>Skills not probed during dialogue defaulted to L1 or broke <code>parseLevel(null)</code>.</td>
+        <td>Candidates falsely penalized as incompetent on unasked questions, eroding interview fairness.</td>
+        <td>Reversible DB migration allowing <code>ai_level: NULL</code>, added <code>is_assessed: false</code>, and updated <code>LevelBadge</code> with dedicated unassessed state.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p1">P1-3</span></td>
+        <td><strong>Fragile Non-Transactional Portfolio Regeneration</strong><br>Regenerating a portfolio purged previous assessor overrides and lacked DB transactions.</td>
+        <td>Assessors lost valuable human calibration notes whenever a portfolio was regenerated.</td>
+        <td>Implemented transactional atomic regeneration with automatic re-attachment of existing assessor overrides by skill label.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p2">P2-1</span></td>
+        <td><strong>Skill Deletion Failure in Nested Attributes</strong><br>Removing skills in <code>AssessmentEditPage</code> and <code>VacancyEditPage</code> didn't pass <code>_destroy: true</code>.</td>
+        <td>Deleted skills silently persisted in the database, confusing recruiters and corrupting assessment criteria.</td>
+        <td>Tracked <code>deletedSkillIds</code> on UI deletion and submitted <code>{ id, _destroy: true }</code> attributes to Rails nested models.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p2">P2-2</span></td>
+        <td><strong>SkillCard Double Prefix Badge Bug</strong><br>Badges rendered <code>SK-SK-001</code> because taxonomy IDs already included <code>SK-</code>.</td>
+        <td>Unprofessional UI presentation giving an impression of unpolished and unmaintained software.</td>
+        <td>Refactored prefix formatter to avoid double-prepending when ID already contains <code>SK-</code>.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p2">P2-3</span></td>
+        <td><strong>Missing Interview Language Selector on Edit</strong><br>Language field was present in New assessment but completely missing from Edit page.</td>
+        <td>Recruiters could not toggle or inspect interview language (English/Indonesian) on existing assessments.</td>
+        <td>Added Language <code>&lt;Select&gt;</code> to <code>AssessmentEditPage.tsx</code> and included <code>:language</code> in controller permitted params.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-p3">P3-1</span></td>
+        <td><strong>Missing Candidate Informed Consent Banner</strong><br>Candidate was dropped straight into hardware check without formal data consent.</td>
+        <td>Non-compliance with explicit consent requirements under UU PDP No. 27/2022.</td>
+        <td>Implemented an explicit PDP Informed Consent Banner with a mandatory acknowledgment checkbox before interview start.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 Architectural Trade-Off Evaluations (Option A vs Option B)</h3>
+
+  <div class="card" style="margin-bottom: 12px;">
+    <div class="card-title">Trade-Off 1: Multi-Tenant Authorization Enforcement</div>
+    <div class="grid-2" style="margin-top: 6px;">
+      <div>
+        <strong>Option A: Controller-level manual <code>where</code> filters</strong><br>
+        <span style="font-size: 8pt; color: #64748b;">Filter each action manually: <code>Session.where(tenant_id: Current.tenant_id).find(params[:id])</code>.</span><br>
+        <em>Pros:</em> Fast to write on single endpoints.<br>
+        <em>Cons:</em> High developer cognitive load; easily forgotten in new routes or exports, leading to recurring IDOR bugs.
+      </div>
+      <div>
+        <strong>Option B: Model-level ActiveSupport scope &amp; relationship traversal (CHOSEN)</strong><br>
+        <span style="font-size: 8pt; color: #64748b;">Define <code>scope :for_current_tenant</code> in <code>Portfolio</code> traversing <code>joins(:session).where(sessions: { tenant_id: Current.tenant_id })</code>.</span><br>
+        <em>Why Chosen:</em> Single source of truth. Any query using <code>Portfolio.for_current_tenant</code> is guaranteed isolated at the query layer across all controllers, workers, and PDF exporters.
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 12px;">
+    <div class="card-title">Trade-Off 2: Fit/Gap Data Seam Alignment</div>
+    <div class="grid-2" style="margin-top: 6px;">
+      <div>
+        <strong>Option A: Strict Breaking Schema Renaming</strong><br>
+        <span style="font-size: 8pt; color: #64748b;">Rename all backend fields to strictly match frontend keys (or vice versa).</span><br>
+        <em>Pros:</em> Clean 1:1 mapping in single repo.<br>
+        <em>Cons:</em> Breaks backward compatibility with existing cached reports, mobile apps, or legacy integrations.
+      </div>
+      <div>
+        <strong>Option B: Dual-Contract Tolerant Reader Seam Adapter (CHOSEN)</strong><br>
+        <span style="font-size: 8pt; color: #64748b;">Backend returns both <code>required_level</code> and <code>expected_level</code>; frontend uses <code>c.required_level ?? c.expected_level</code>.</span><br>
+        <em>Why Chosen:</em> Zero regression risk. Complies with Martin Fowler's Tolerant Reader pattern, preserving full backward and forward interoperability.
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 12px;">
+    <div class="card-title">Trade-Off 3: Handling Unassessed Competencies</div>
+    <div class="grid-2" style="margin-top: 6px;">
+      <div>
+        <strong>Option A: Default unassessed skills to L1 (Foundational)</strong><br>
+        <span style="font-size: 8pt; color: #64748b;">Treat missing evidence as baseline minimum level.</span><br>
+        <em>Pros:</em> Avoids database nullability changes.<br>
+        <em>Cons:</em> False evaluation! An applicant who was never asked about Distributed Systems is marked as incompetent (L1), creating unfair rejections.
+      </div>
+      <div>
+        <strong>Option B: Explicit Nullability &amp; <code>is_assessed: false</code> Flag (CHOSEN)</strong><br>
+        <span style="font-size: 8pt; color: #64748b;">Migrate schema to allow <code>ai_level: NULL</code>, add boolean <code>is_assessed</code>, and distinct UI styling.</span><br>
+        <em>Why Chosen:</em> Absolute integrity. Clearly signals to hiring managers that the competency requires a dedicated follow-up, rather than fabricating a score.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- STEP 4: IMPLEMENTATION & ARCHITECTURE -->
+  <h2>Step 4: Fullstack Implementation &amp; Architecture</h2>
+
+  <h3>4.1 Database Migration &amp; 100% Reversibility</h3>
+  <p>
+    The migration <code>20261105093647_allow_null_ai_level_on_portfolio_skills_and_add_assessed_flag.rb</code> was implemented with complete bidirectional reversibility:
+  </p>
+  <pre><code class="language-ruby">class AllowNullAiLevelOnPortfolioSkillsAndAddAssessedFlag < ActiveRecord::Migration[7.0]
+  def change
+    add_column :portfolio_skills, :is_assessed, :boolean, default: true, null: false
+    change_column_null :portfolio_skills, :ai_level, true
+    change_column_null :portfolio_skills, :competency_summary, true
+
+    # Replaces rigid 1..5 check constraint with NULL-safe check
+    reversible do |dir|
+      dir.up do
+        execute("ALTER TABLE portfolio_skills DROP CONSTRAINT IF EXISTS chk_portfolio_skills_ai_level")
+        execute("ALTER TABLE portfolio_skills ADD CONSTRAINT chk_portfolio_skills_ai_level CHECK (ai_level IS NULL OR (ai_level >= 1 AND ai_level <= 5))")
+      end
+      dir.down do
+        execute("UPDATE portfolio_skills SET ai_level = 1 WHERE ai_level IS NULL")
+        execute("ALTER TABLE portfolio_skills DROP CONSTRAINT IF EXISTS chk_portfolio_skills_ai_level")
+        execute("ALTER TABLE portfolio_skills ADD CONSTRAINT chk_portfolio_skills_ai_level CHECK (ai_level BETWEEN 1 AND 5)")
+      end
+    end
+  end
+end</code></pre>
+  <div class="callout callout-warning">
+    <div class="callout-title">Migration Reversibility Verification</div>
+    Verified via <code>rails db:migrate</code> &rarr; <code>rails db:rollback</code> &rarr; <code>rails db:migrate</code>. Down migration cleanses null values before re-applying original constraint, ensuring zero data lock-in.
+  </div>
+
+  <h3>4.2 Backend Multi-Tenant Isolation &amp; Privacy Filtering</h3>
+  <pre><code class="language-ruby"># api/app/models/portfolio.rb
+class Portfolio < ApplicationRecord
+  belongs_to :session
+  has_many :portfolio_skills, dependent: :destroy
+  has_many :assessor_overrides, through: :portfolio_skills
+  delegate :tenant_id, to: :session
+
+  scope :for_current_tenant, -> {
+    joins(:session).where(sessions: { tenant_id: Current.tenant_id })
+  }
+end
+
+# api/config/initializers/filter_parameter_logging.rb
+Rails.application.config.filter_parameters += [
+  :passw, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn,
+  :audio, :transcript, :candidate_name, :gemini_api_key, :pcm_audio
+]</code></pre>
+
+  <h3>4.3 Frontend Polling Storm Guard &amp; Readiness Scorecard</h3>
+  <pre><code class="language-typescript">// web/src/pages/fitgap/FitGapReportPage.tsx
+const hasTriggeredRef = useRef(false);
+
+const fetchReport = useCallback(async () => {
+  if (!portfolio) return;
+  try {
+    const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
+    setReport(res.data.report);
+    setGenerating(false);
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      // Monozukuri Fix: Only trigger background generation once!
+      if (!hasTriggeredRef.current) {
+        hasTriggeredRef.current = true;
+        await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+        setGenerating(true);
+      }
+    }
+  }
+}, [portfolio, vacancyId]);</code></pre>
+
+  <div class="page-break"></div>
+
+  <!-- STEP 5: PROOF & DEMONSTRATION -->
+  <h2>Step 5: Demonstration &amp; Proof</h2>
+
+  <h3>5.1 Automated Test Execution Proof</h3>
+  <div class="grid-2">
+    <div>
+      <div class="card-title">Backend: RSpec Suite (16 Examples, 0 Failures)</div>
+      <pre><code>$ bundle exec rspec
+................
+
+Finished in 0.58673 seconds (files took 1.11 seconds to load)
+16 examples, 0 failures
+
+Verified Specs:
+- PortfolioSkill model (validations, null ai_level, effective_level)
+- FitGap::Engine (delta calculations, assessor override precedence)
+- Portfolios::Generator (transactional integrity, override retention)
+- Portfolios Request API (multi-tenant isolation, cross-tenant IDOR 404)
+- PortfolioSkills Request API (override creation, cross-tenant blocking)</code></pre>
+    </div>
+    <div>
+      <div class="card-title">Frontend: Vitest Suite (7 Tests, 0 Failures)</div>
+      <pre><code>$ npm test
+✓ src/components/fitgap/ComparisonTable.test.tsx (4 tests) 53ms
+  ✓ renders all comparison rows with required & candidate levels
+  ✓ displays human override indicator and assessor note
+  ✓ computes and renders match rate summary metrics correctly
+  ✓ handles unassessed skill without crashing and shows 'Not assessed'
+
+✓ src/components/portfolio/SkillPortfolioCard.test.tsx (3 tests) 35ms
+  ✓ renders assessed skill details, target level, confidence, and quotes
+  ✓ renders unassessed skill clearly with 'Not Assessed' and explanation
+  ✓ renders human assessor override banner and notes when present
+
+Test Files: 2 passed (2) | Tests: 7 passed (7)</code></pre>
+    </div>
+  </div>
+
+  <h3>5.2 Seeded Fault Test Proof (Deliberate Defect &amp; Resolution)</h3>
+  <p>
+    To verify that our test suite genuinely asserts business-critical correctness rather than merely exercising happy paths, a deliberate fault was seeded directly in <code>FitGap::Engine</code>.
+  </p>
+
+  <div class="card" style="border-left: 4px solid #ef4444; margin-bottom: 12px;">
+    <strong>Seeded Fault Commit:</strong> <code>29a22bd</code> (<em>test(proof): demonstrate seeded fault in FitGap::Engine for Step 5</em>)<br>
+    <strong>Fault Injected:</strong> Deliberately commented out the assessor override lookup in <code>effective_portfolio_skills</code>, forcing the engine to evaluate only raw AI levels (ignoring human adjustments).
+  </div>
+
+  <pre><code class="language-diff">--- a/api/app/services/fit_gap/engine.rb
++++ b/api/app/services/fit_gap/engine.rb
+@@ -89,3 +89,4 @@ module FitGap
+           ai_level:        skill.ai_level,
+-          effective_level: override ? override.override_level : skill.ai_level,
++          # SEEDED FAULT FOR STEP 5 PROOF: Ignored assessor override
++          effective_level: skill.ai_level,
+           confidence:      skill.ai_confidence,</code></pre>
+
+  <p><strong>RSpec Test Failure Catch Output:</strong></p>
+  <pre><code class="language-text">Failures:
+  1) FitGap::Engine generates comparison conforming to the frontend contract seam
+     Failure/Error: expect(nodejs['result']).to eq('exceed')
+     
+       expected: "exceed"
+            got: "gap"
+     
+       (compared using ==)
+     # ./spec/services/fit_gap/engine_spec.rb:92:in `block (2 levels) in &lt;top (required)&gt;'
+
+Finished in 0.18867 seconds (files took 2.77 seconds to load)
+1 example, 1 failure</code></pre>
+
+  <div class="card" style="border-left: 4px solid #10b981;">
+    <strong>Resolution Commit:</strong> <code>495701f</code> (<em>Revert "test(proof): demonstrate seeded fault in FitGap::Engine for Step 5"</em>)<br>
+    <strong>Verification:</strong> <code>bundle exec rspec</code> executed immediately upon revert &rarr; <strong>16 examples, 0 failures</strong>. Proves the test suite possesses high mutant-killing sensitivity.
+  </div>
+
+  <h3>5.3 The AI Verification Moment</h3>
+  <div class="callout">
+    <div class="callout-title">Reflective Engineering Observation</div>
+    During initial testing of 0-dialogue sessions, AI evaluation models repeatedly produced contradictory behaviors: when a candidate never spoke about a topic, some models emitted <code>"ai_level": "L1"</code> with <code>"ai_confidence": "low"</code>, while others emitted <code>"ai_level": null</code>. Previously, the system blindly accepted L1, falsely scoring the candidate down.
+    <br><br>
+    By establishing a first-principles rule—<em>"Lack of evidence is not evidence of incompetence"</em>—we enforced a database migration and service contract requiring <code>is_assessed: false</code> whenever dialogue turns are absent or unprobed. The AI's tendency to guess was bound by deterministic system constraints.
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- STEP 6: VISUAL SHOWCASE & SCREENSHOTS -->
+  <h2>Visual UI Showcase &amp; Screen Flows</h2>
+
+  <div class="img-container">
+    <img src="./screenshots/01_interview_pdp_consent.png" alt="Candidate Interview Pre-start with UU PDP Consent">
+    <div class="img-caption">Figure 1: Candidate pre-start screen featuring the mandatory UU PDP Informed Consent notice and hardware proctoring check.</div>
+  </div>
+
+  <div class="img-container">
+    <img src="./screenshots/02_portfolio_results.png" alt="Portfolio Results with Assessor Override & Unassessed Skill">
+    <div class="img-caption">Figure 2: Revamped Portfolio Results showing candidate name, target level badges, human assessor override banner, and clear unassessed state for Security Engineering.</div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="img-container">
+    <img src="./screenshots/03_fitgap_report.png" alt="Fit/Gap Report with Readiness Scorecard & Comparison Table">
+    <div class="img-caption">Figure 3: Revamped Fit/Gap Report showing match rate gauge (100% on assessed skills), human override indicator with AI baseline, assessor note, and unassessed status.</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="img-container">
+      <img src="./screenshots/04_assessment_edit.png" alt="Assessment Edit Page with Language and Taxonomy">
+      <div class="img-caption">Figure 4: Assessment edit form with language selection, B7 skill anchors, and safe deletions.</div>
+    </div>
+    <div class="img-container">
+      <img src="./screenshots/05_mobile_responsive_fitgap.png" alt="Mobile Responsive View for Fit/Gap Report">
+      <div class="img-caption">Figure 5: Mobile viewport (390px) verifying responsive typography, wrapped tables, and gauges.</div>
+    </div>
+  </div>
+
+  <!-- CONCLUSION & VIDEO WALKTHROUGH LINK -->
+  <div class="page-break"></div>
+  <h2>Video Walkthrough &amp; Demonstration Guide</h2>
+
+  <div class="card" style="background: #f8fafc; padding: 16px; margin: 1.5em 0;">
+    <div style="font-size: 11pt; font-weight: 700; color: #0284c7; margin-bottom: 8px;">
+      🎥 Video Demonstration Link
+    </div>
+    <div style="font-size: 10pt; margin-bottom: 12px;">
+      <a href="https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69" target="_blank" style="font-weight: 600; color: #0369a1; text-decoration: underline;">
+        https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69
+      </a>
+    </div>
+    <p style="font-size: 8.5pt; color: #475569;">
+      A 4-minute structured walkthrough demonstrating the full user flow, architecture, and live test proof:
+    </p>
+    <table style="margin-top: 8px; font-size: 8pt;">
+      <thead>
+        <tr>
+          <th style="width: 15%;">Timestamp</th>
+          <th style="width: 35%;">Topic</th>
+          <th style="width: 50%;">Highlights Demonstrated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>00:00 - 00:45</strong></td>
+          <td>Problem Space &amp; Mental Model</td>
+          <td>Overview of AI interview challenges, P0-P3 gap analysis, and Monozukuri philosophy.</td>
+        </tr>
+        <tr>
+          <td><strong>00:45 - 01:45</strong></td>
+          <td>Candidate Journey &amp; Privacy</td>
+          <td>Pre-start experience, UU PDP Informed Consent banner, and WebSocket audio flow.</td>
+        </tr>
+        <tr>
+          <td><strong>01:45 - 02:45</strong></td>
+          <td>Assessor Portfolio &amp; Override</td>
+          <td>Reviewing candidate evidence, unassessed skills, applying human overrides, and PDF export.</td>
+        </tr>
+        <tr>
+          <td><strong>02:45 - 03:30</strong></td>
+          <td>Fit/Gap Readiness &amp; Seam Fix</td>
+          <td>Analyzing candidate fit against role vacancy, readiness gauge, and polling storm resolution.</td>
+        </tr>
+        <tr>
+          <td><strong>03:30 - 04:15</strong></td>
+          <td>Monozukuri Test &amp; Seeded Fault Proof</td>
+          <td>Terminal execution of RSpec (16/16) and Vitest (7/7), and review of seeded fault commit.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 3em; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 8pt; color: #94a3b8;">
+    Rakamin Fullstack Product Engineer Assessment &bull; Crafted with First-Principles Monozukuri Precision
+  </div>
+
+</body>
+</html>

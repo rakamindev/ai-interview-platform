@@ -32,8 +32,8 @@ module Api
           return json_error("No portfolio found for this session", :not_found)
         end
 
-        unless portfolio.failed?
-          return json_error("Portfolio can only be regenerated when status is 'failed'", :unprocessable_entity)
+        unless portfolio.failed? || portfolio.complete?
+          return json_error("Portfolio is currently generating", :unprocessable_entity)
         end
 
         portfolio.update!(generation_status: "pending", generation_error: nil)
@@ -79,7 +79,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/regenerate_fitgap
       def regenerate_fitgap
-        portfolio  = Portfolio.find(params[:id])
+        portfolio  = Portfolio.for_current_tenant.find(params[:id])
         vacancy_id = params[:vacancy_id]
 
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -101,7 +101,7 @@ module Api
 
       # POST /api/v1/portfolios/:id/fitgap
       def fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_current_tenant.find(params[:id])
 
         vacancy_id = params.dig(:fitgap, :vacancy_id) || params[:vacancy_id]
         return json_error("vacancy_id is required", :unprocessable_entity) if vacancy_id.blank?
@@ -113,7 +113,7 @@ module Api
           return json_error("Portfolio is not ready (status: #{portfolio.generation_status})", :unprocessable_entity)
         end
 
-        # Return cached report if it exists and portfolio has no new overrides
+        # Return cached report if it exists
         existing = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: vacancy.id)
         if existing
           return json_response(report: fit_gap_json(existing))
@@ -127,7 +127,7 @@ module Api
 
       # GET /api/v1/portfolios/:id/fitgap/:vacancy_id
       def show_fitgap
-        portfolio = Portfolio.find(params[:id])
+        portfolio = Portfolio.for_current_tenant.find(params[:id])
         report    = FitGapReport.find_by(portfolio_id: portfolio.id, vacancy_id: params[:vacancy_id])
 
         if report.nil?
@@ -148,52 +148,61 @@ module Api
       end
 
       def set_portfolio
-        # Routes use :id for both session-based and direct portfolio lookups
-        # If called from session context, look up via session
         if @session
           @portfolio = @session.portfolio
         else
-          @portfolio = Portfolio.find(params[:id])
+          @portfolio = Portfolio.for_current_tenant.find(params[:id])
         end
       rescue ActiveRecord::RecordNotFound
         json_error("Portfolio not found", :not_found)
       end
 
       def portfolio_json(portfolio)
+        assessment_skills = portfolio.session.assessment.assessment_skills.index_by { |s| s.skill_id.presence || s.skill_label.downcase.strip }
+
         {
           id:                portfolio.id,
           session_id:        portfolio.session_id,
           candidate_id:      portfolio.candidate_id,
+          candidate_name:    portfolio.session.candidate_name,
+          role_title:        portfolio.session.assessment.name,
           generation_status: portfolio.generation_status,
           generated_at:      portfolio.generated_at,
           generation_error:  portfolio.generation_error,
-          skills:            portfolio.portfolio_skills.map(&method(:portfolio_skill_json)),
+          skills:            portfolio.portfolio_skills.map { |s| portfolio_skill_json(s, assessment_skills) },
           overrides:         portfolio.assessor_overrides.map(&method(:override_json))
         }
       end
 
-      def portfolio_skill_json(skill)
+      def portfolio_skill_json(skill, assessment_skills = {})
+        key = skill.skill_id.presence || skill.skill_label.downcase.strip
+        askill = assessment_skills[key]
+
         {
-          id:                skill.id,
-          skill_id:          skill.skill_id,
-          skill_label:       skill.skill_label,
-          is_discovered:     skill.is_discovered,
-          ai_level:          skill.ai_level,
-          ai_confidence:     skill.ai_confidence,
-          evidence:          skill.evidence_quotes,
+          id:                 skill.id,
+          skill_id:           skill.skill_id,
+          skill_label:        skill.skill_label,
+          is_discovered:      skill.is_discovered,
+          is_assessed:        skill.is_assessed?,
+          ai_level:           skill.ai_level ? "L#{skill.ai_level}" : nil,
+          raw_ai_level:       skill.ai_level,
+          effective_level:    skill.effective_level ? "L#{skill.effective_level}" : nil,
+          expected_level:     askill&.expected_level,
+          ai_confidence:      skill.ai_confidence,
+          evidence:           skill.evidence_quotes,
           competency_summary: skill.competency_summary
         }
       end
 
       def override_json(override)
         {
-          id:             override.id,
+          id:                 override.id,
           portfolio_skill_id: override.portfolio_skill_id,
-          ai_level:       override.ai_level,
-          override_level: override.override_level,
-          assessor_notes: override.assessor_notes,
-          overridden_by:  override.overridden_by,
-          overridden_at:  override.overridden_at
+          ai_level:           override.ai_level,
+          override_level:     override.override_level,
+          assessor_notes:     override.assessor_notes,
+          overridden_by:      override.overridden_by,
+          overridden_at:      override.overridden_at
         }
       end
 

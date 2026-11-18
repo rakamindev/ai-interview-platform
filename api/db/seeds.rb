@@ -369,6 +369,15 @@ end
 puts "  Done — #{B7_SKILLS.size} skills seeded."
 puts ""
 
+# ── Seed Default Assessor User ────────────────────────────────────────────────
+puts "== Seeding Default Assessor User =="
+admin_user = User.find_or_initialize_by(email: "admin@test-corp.local")
+admin_user.password = "password123"
+admin_user.role = "admin"
+admin_user.save!
+puts "  Created/Updated Assessor: #{admin_user.email} (password: password123)"
+
+
 # ── Print usage instructions ──────────────────────────────────────────────────
 
 org = ActiveRecord::Base.connection.select_one(

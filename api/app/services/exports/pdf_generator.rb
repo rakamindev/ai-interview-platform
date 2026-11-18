@@ -43,6 +43,7 @@ module Exports
       pdf.move_down 4
 
       pdf.font_size(10) do
+        pdf.text "Candidate: #{@session.candidate_name}" if @session.candidate_name.present?
         pdf.text "Session: #{@session.id}"
         pdf.text "Duration: #{format_duration(@session.duration_seconds)}"
         pdf.text "Generated: #{Time.current.strftime('%Y-%m-%d %H:%M')}"
@@ -61,7 +62,7 @@ module Exports
       discovered = skills.select(&:is_discovered)
 
       if configured.any?
-        pdf.font_size(13) { pdf.text "Assessed Skills", style: :bold }
+        pdf.font_size(13) { pdf.text "Configured Assessment Skills", style: :bold }
         pdf.move_down 6
         configured.each { |skill| render_skill_card(pdf, skill) }
       end
@@ -81,8 +82,18 @@ module Exports
       pdf.font_size(11) do
         pdf.text "#{skill.skill_label}", style: :bold
 
-        level_text = "Level: #{LEVEL_LABELS[effective_level]}"
-        level_text += " (AI: #{LEVEL_LABELS[skill.ai_level]} → Override: #{LEVEL_LABELS[override.override_level]})" if override
+        level_str = if effective_level
+                      LEVEL_LABELS[effective_level] || "L#{effective_level}"
+                    else
+                      "Not Assessed"
+                    end
+
+        level_text = "Level: #{level_str}"
+        if override
+          ai_str = skill.ai_level ? (LEVEL_LABELS[skill.ai_level] || "L#{skill.ai_level}") : "Not Assessed"
+          override_str = LEVEL_LABELS[override.override_level] || "L#{override.override_level}"
+          level_text += " (AI: #{ai_str} → Override: #{override_str})"
+        end
         level_text += "  |  Confidence: #{CONFIDENCE_LABELS[skill.ai_confidence] || skill.ai_confidence}"
         pdf.text level_text
       end
@@ -97,7 +108,7 @@ module Exports
         pdf.move_down 4
         pdf.font_size(10) do
           pdf.text "Evidence:", style: :bold
-          skill.evidence.each { |quote| pdf.text "  • #{quote}" }
+          skill.evidence.each { |quote| pdf.text "  • \"#{quote}\"" }
         end
       end
 
@@ -123,11 +134,16 @@ module Exports
 
       table_data = [['Skill', 'Required', 'Candidate', 'Result', 'Delta']]
       comparisons.each do |c|
+        req = c['required_level'] || c['expected_level']
+        cand = c['candidate_level']
+        res = RESULT_LABELS[c['result']] || c['result']
+        res += " (Override)" if c['is_override']
+
         table_data << [
           c['skill_label'],
-          c['expected_level'] ? "L#{c['expected_level']}" : '—',
-          c['candidate_level'] ? "L#{c['candidate_level']}" : '—',
-          RESULT_LABELS[c['result']] || c['result'],
+          req ? "L#{req}" : '—',
+          cand ? "L#{cand}" : 'Not Assessed',
+          res,
           c['delta'] ? (c['delta'] > 0 ? "+#{c['delta']}" : c['delta'].to_s) : '—'
         ]
       end

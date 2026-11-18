@@ -7,11 +7,20 @@ class Portfolio < ApplicationRecord
   has_many :portfolio_skills, dependent: :destroy
   has_many :assessor_overrides, through: :portfolio_skills
 
+  delegate :tenant_id, to: :session, allow_nil: true
+
   validates :generation_status, inclusion: { in: GENERATION_STATUSES }
 
-  scope :complete,    -> { where(generation_status: 'complete') }
-  scope :failed,      -> { where(generation_status: 'failed') }
-  scope :generating,  -> { where(generation_status: 'generating') }
+  scope :complete,           -> { where(generation_status: 'complete') }
+  scope :failed,             -> { where(generation_status: 'failed') }
+  scope :generating,         -> { where(generation_status: 'generating') }
+  scope :for_current_tenant, -> {
+    if Current.tenant_id
+      joins(:session).where(sessions: { tenant_id: Current.tenant_id })
+    else
+      all
+    end
+  }
 
   def complete?    = generation_status == 'complete'
   def generating?  = generation_status == 'generating'

@@ -21,7 +21,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useAudioWebSocket } from "@/hooks/useAudioWebSocket";
 import { sessionsApi } from "@/services/sessions";
 import HardwareCheck from "@/components/HardwareCheck";
-import { CheckCircle, Mic, MicOff } from "lucide-react";
+import { CheckCircle, Mic, MicOff, ShieldCheck } from "lucide-react";
 import type { CandidateInfo, InterviewState, InterviewSpeaker, TranscriptTurn } from "@/types";
 
 export default function InterviewPage() {
@@ -32,6 +32,7 @@ export default function InterviewPage() {
   const [speaker, setSpeaker] = useState<InterviewSpeaker>(null);
   const [transcript, setTranscript] = useState<Pick<TranscriptTurn, "speaker" | "text">[]>([]);
   const [hardwareCheckDone, setHardwareCheckDone] = useState(false); // kept for green banner
+  const [consentGiven, setConsentGiven] = useState(false);
   const [connectionLostLong, setConnectionLostLong] = useState(false);
   const [reconnectedPrompt, setReconnectedPrompt] = useState(false);
   const reconnectedPromptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,6 +201,27 @@ export default function InterviewPage() {
           )}
         </div>
 
+        <div className="bg-muted/40 rounded-lg p-4 text-xs space-y-2 border">
+          <div className="flex items-center gap-1.5 font-semibold text-foreground text-sm">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <span>Pemberitahuan Privasi &amp; Pelindungan Data (UU PDP No. 27/2022)</span>
+          </div>
+          <p className="text-muted-foreground leading-relaxed">
+            Sesi ini menggunakan kecerdasan buatan (AI) untuk melakukan wawancara suara dan menganalisis kesesuaian kompetensi kerja. Transkrip dan rekaman disimpan secara terenkripsi dengan akses terbatas khusus untuk tim penilai resmi organisasi. Data Anda dilindungi sesuai ketentuan UU PDP No. 27/2022.
+          </p>
+          <label className="flex items-start gap-2 pt-1 cursor-pointer font-medium text-foreground select-none">
+            <input
+              type="checkbox"
+              checked={consentGiven}
+              onChange={(e) => setConsentGiven(e.target.checked)}
+              className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span>
+              Saya menyetujui pemrosesan data suara dan transkrip wawancara untuk keperluan asesmen kompetensi kerja.
+            </span>
+          </label>
+        </div>
+
         {!hardwareCheckDone ? (
           <div className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-1.5 text-muted-foreground">
@@ -208,7 +230,16 @@ export default function InterviewPage() {
               <p>• The session will last up to {candidateInfo?.time_limit_min ?? "—"} minutes.</p>
               <p>• Your mic will be active throughout. You can end anytime.</p>
             </div>
-            <HardwareCheck onStart={() => { setHardwareCheckDone(true); startInterview(); }} />
+            <HardwareCheck
+              onStart={() => {
+                if (!consentGiven) {
+                  alert("Harap centang persetujuan pemrosesan data (UU PDP) terlebih dahulu.");
+                  return;
+                }
+                setHardwareCheckDone(true);
+                startInterview();
+              }}
+            />
           </div>
         ) : (
           <div className="space-y-4">
@@ -216,7 +247,7 @@ export default function InterviewPage() {
               <CheckCircle className="h-4 w-4 shrink-0" />
               <span>Hardware checks passed. You're ready to start.</span>
             </div>
-            <Button className="w-full" size="lg" onClick={startInterview}>
+            <Button className="w-full" size="lg" disabled={!consentGiven} onClick={startInterview}>
               <Mic className="h-4 w-4 mr-2" />
               Start Interview
             </Button>

@@ -16,7 +16,7 @@ export interface Assessment {
 
 export interface AssessmentSkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | number;
   skill_label: string;
   is_custom: boolean;
   expected_level: number;
@@ -87,13 +87,17 @@ export interface Portfolio {
 
 export interface PortfolioSkill {
   id: number;
-  skill_id?: number;
+  skill_id?: string | number;
   skill_label: string;
-  is_discovered: boolean;
-  ai_level: string;       // "L1" | "L2" | "L3" | "L4" | "L5"
+  is_discovered?: boolean;
+  ai_level: string | number | null;       // "L1" | "L2" | "L3" | "L4" | "L5" | 1..5 | null
   ai_confidence: string;  // "high" | "medium" | "low"
   evidence: string[];
-  competency_summary: string;
+  competency_summary: string | null;
+  is_assessed?: boolean;
+  expected_level?: number;
+  effective_level?: number | null;
+  assessor_override?: AssessorOverride | null;
 }
 
 export interface AssessorOverride {
@@ -119,7 +123,7 @@ export interface Vacancy {
 
 export interface VacancySkill {
   id?: number;
-  skill_id?: number;
+  skill_id?: string | number;
   skill_label: string;
   expected_level: number;
   _destroy?: boolean;
@@ -129,11 +133,19 @@ export type SkillComparisonResult = "match" | "gap" | "exceed" | "not_assessed";
 
 export interface SkillComparison {
   skill_label: string;
+  skill_id?: string | number;
   required_level: number;
-  candidate_level?: number;
+  expected_level?: number;
+  candidate_level?: number | null;
+  actual_level?: number | null;
+  effective_level?: number | null;
+  ai_level?: number | null;
   result: SkillComparisonResult;
-  delta?: number;
+  delta?: number | null;
   is_override?: boolean;
+  is_assessed?: boolean;
+  confidence?: string;
+  assessor_notes?: string | null;
 }
 
 export interface FitGapReport {

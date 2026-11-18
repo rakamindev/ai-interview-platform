@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import ComparisonTable from "@/components/fitgap/ComparisonTable";
 import { portfoliosApi } from "@/services/portfolios";
 import { sessionsApi } from "@/services/sessions";
 import { usePolling } from "@/hooks/usePolling";
-import { ArrowLeft, Download, Loader2, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw, Zap, AlertCircle } from "lucide-react";
 import type { FitGapReport, Portfolio } from "@/types";
 
 export default function FitGapReportPage() {
@@ -24,6 +24,8 @@ export default function FitGapReportPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "json" | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasTriggeredRef = useRef(false);
 
   const fetchReport = useCallback(async () => {
     if (!portfolio) return;
@@ -31,14 +33,23 @@ export default function FitGapReportPage() {
       const res = await portfoliosApi.getFitGap(portfolio.id, Number(vacancyId));
       setReport(res.data.report);
       setGenerating(false);
+      setError(null);
     } catch (e: any) {
       if (e?.response?.status === 404) {
-        try {
-          await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
-          setGenerating(true);
-        } catch {
-          setGenerating(false);
+        // Only trigger once to avoid polling flood
+        if (!hasTriggeredRef.current) {
+          hasTriggeredRef.current = true;
+          try {
+            await portfoliosApi.triggerFitGap(portfolio.id, Number(vacancyId));
+            setGenerating(true);
+          } catch {
+            setGenerating(false);
+            setError("Failed to trigger fit/gap analysis.");
+          }
         }
+      } else {
+        setGenerating(false);
+        setError("An error occurred while loading the report.");
       }
     }
   }, [portfolio, vacancyId]);
@@ -64,10 +75,14 @@ export default function FitGapReportPage() {
   const handleRegenerate = async () => {
     if (!portfolio) return;
     setRegenerating(true);
+    hasTriggeredRef.current = true;
     try {
       await portfoliosApi.regenerateFitGap(portfolio.id, Number(vacancyId));
       setReport(null);
       setGenerating(true);
+      setError(null);
+    } catch {
+      setError("Failed to regenerate report.");
     } finally {
       setRegenerating(false);
     }
@@ -139,6 +154,14 @@ export default function FitGapReportPage() {
           </div>
         )}
       </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Generating */}
       {generating && (
