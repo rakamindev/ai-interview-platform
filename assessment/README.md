@@ -3,9 +3,10 @@
 
 - **Target Repository:** `rakamindev/ai-interview-platform`
 - **Feature Branch:** `feat/monozukuri-fullstack-revamp`
+- **Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/251](https://github.com/rakamindev/ai-interview-platform/pull/251)
 - **Candidate:** Asep (Senior Fullstack Product Engineer)
 - **Comprehensive PDF Report:** [`assessment/Fullstack_Product_Engineer_Case_Study_Report.pdf`](./Fullstack_Product_Engineer_Case_Study_Report.pdf)
-- **Demonstration Video Walkthrough:** [https://www.loom.com/share/placeholder-ai-interview-monozukuri-walkthrough](https://www.loom.com/share/placeholder-ai-interview-monozukuri-walkthrough)
+- **Demonstration Video Walkthrough:** [https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69](https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69)
 
 ---
 
@@ -226,4 +227,5 @@ The 4-minute demonstration walkthrough covers:
 - **02:45 - 03:30:** Fit/Gap Readiness & Seam Fix (Analyzing candidate fit against role vacancy, readiness gauge, polling storm resolution).
 - **03:30 - 04:15:** Monozukuri Test & Seeded Fault Proof (Terminal execution of RSpec 16/16 and Vitest 7/7, review of seeded fault commit).
 
-🔗 **Video Link:** [https://www.loom.com/share/placeholder-ai-interview-monozukuri-walkthrough](https://www.loom.com/share/placeholder-ai-interview-monozukuri-walkthrough)
+🔗 **Pull Request Link:** [https://github.com/rakamindev/ai-interview-platform/pull/251](https://github.com/rakamindev/ai-interview-platform/pull/251)  
+🔗 **Video Link:** [https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69](https://www.loom.com/share/579c3d0395cb4da2a3e4536385d80b69)
