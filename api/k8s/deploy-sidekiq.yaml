@@ -21,15 +21,9 @@ spec:
       labels:
         app: ai-interview-sidekiq
     spec:
-      # ── Dedicated node pool ─────────────────────────────────────────────────
+      # ── Node placement: shared staging compute class ────────────────────────
       nodeSelector:
-        cloud.google.com/gke-nodepool: paragon-t2d-tau-pool
-      
-      tolerations:
-        - key: cloud.google.com/compute-class
-          operator: Equal
-          value: paragon-compute-class-tau-nodepool
-          effect: NoSchedule
+        cloud.google.com/compute-class: staging-shared-compute-class
 
       # ── Co-location rules ───────────────────────────────────────────────────
       affinity:
