@@ -1,10 +1,9 @@
 # GKE deployment for ai-interview-api (Rails + Puma + EventMachine WebSocket).
 #
-# Node strategy — 1 API pod + 1 Sidekiq pod per dedicated node (paragon-t2d-tau-pool):
-#   - nodeSelector: pods only land on paragon-t2d-tau-pool nodes
+# Node strategy — 1 API pod + 1 Sidekiq pod per node, on the shared staging compute class:
+#   - nodeSelector: cloud.google.com/compute-class: staging-shared-compute-class
 #   - podAntiAffinity (required): at most 1 API pod per node
 #   - Sidekiq uses podAffinity to follow API pods — see k8s/deploy-sidekiq.yaml
-#   - See k8s/nodepool.yaml for pool creation instructions
 #
 # To scale (N pods = N nodes needed):
 #   kubectl scale deployment ai-interview-api     --replicas=N
@@ -32,15 +31,9 @@ spec:
       labels:
         app: ai-interview-api
     spec:
-      # ── Dedicated node enforcement ──────────────────────────────────────────
+      # ── Node placement: shared staging compute class ────────────────────────
       nodeSelector:
-        cloud.google.com/gke-nodepool: paragon-t2d-tau-pool
-
-      tolerations:
-        - key: cloud.google.com/compute-class
-          operator: Equal
-          value: paragon-compute-class-tau-nodepool
-          effect: NoSchedule
+        cloud.google.com/compute-class: staging-shared-compute-class
 
       # Prevent more than 1 ai-interview pod per physical node.
       # Required (not preferred) so the constraint is never violated.
